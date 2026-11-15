@@ -11,7 +11,7 @@ Dostajesz ścieżkę do jednej specyfikacji testów. Piszesz dokładnie te testy
 
 1. Przeczytaj `SKILLS/projekt/profil.md` (komendy) i `SKILLS/projekt/konwencje.md` (sekcja „Testy”).
 2. Przeczytaj specyfikację (pełna ścieżka od zlecającego). `Docs/` jest w `.gitignore`, więc czytaj po pełnej ścieżce. Prompt kodu z nagłówka czytaj tylko wtedy, gdy „Przygotowanie” czegoś nie rozstrzyga.
-3. Napisz plik testów z nagłówka specyfikacji. Kod testów piszesz sam: specyfikacja mówi, co sprawdzić („dane → oczekiwany wynik”), a asercje, fixture'y i parametryzację dobierasz Ty według konwencji projektu. Nie zmieniasz przy tym:
+3. Napisz plik testów z nagłówka specyfikacji. Kod testów piszesz sam: specyfikacja mówi, co sprawdzić („dane → oczekiwany wynik”), a asercje, przygotowanie danych i parametryzację dobierasz Ty według konwencji projektu. Nie zmieniasz przy tym:
    - importów i obiektów z „Przygotowania”;
    - nazw testów;
    - danych wejściowych i oczekiwanych wyników, co do znaku.
@@ -23,7 +23,7 @@ Przykład zamiany specyfikacji na test: `SKILLS/wykonawca-testow_skill/przyklad.
 
 ## Granice
 
-- Zmieniasz tylko plik testów z nagłówka (i wspólne fixture'y, jeśli nagłówek na to pozwala) oraz swój raport w `Docs/Postep/`.
+- Zmieniasz tylko plik testów z nagłówka (i wspólne przygotowanie testów, jeśli nagłówek na to pozwala) oraz swój raport w `Docs/Postep/`.
 - Nie zmieniasz kodu, nawet gdy widzisz w nim błąd. Opisz go w raporcie.
 - Nie dopisujesz testów spoza specyfikacji. Jeśli Twoim zdaniem czegoś brakuje, zapisz to w raporcie.
 - Nie robisz commitów.

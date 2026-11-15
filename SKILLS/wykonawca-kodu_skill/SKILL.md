@@ -17,8 +17,8 @@ Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i 
    - kod w miejscu z „Punktu wpięcia”, importy dokładnie z „Importów”;
    - wszystko z „Do użycia” wywołujesz, a nie piszesz od nowa;
    - funkcja pomocnicza spoza szkieletu jest prywatna według konwencji projektu i zostaje w swoim pliku;
-   - docstringi zostają tak, jak są w szkielecie;
-   - przykłady z docstringów muszą działać;
+   - opisy funkcji zostają tak, jak są w szkielecie;
+   - przykłady z opisów funkcji muszą działać;
    - każdy wpis z sekcji „Uwaga” ma być obsłużony w kodzie.
 5. Wykonaj sprawdzenie z „Gotowe, gdy” i porównaj wynik z oczekiwanym.
 6. Uruchom „Sprawdzenie statyczne” z profilu i popraw błędy w swoich plikach. Błędy w plikach spoza listy „Pliki” zostawiasz i opisujesz w raporcie, bo mogą pochodzić od równoległego wykonawcy.
@@ -38,7 +38,7 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
 - Nie robisz commitów.
 - **Zablokowane.** Kończysz raportem z wynikiem „zablokowane” i opisem problemu, zamiast wymyślać własną wersję, gdy:
   - „Stan obecny” nie zgadza się z kodem w pliku (inna sygnatura, brak klasy, inna klasa bazowa);
-  - przykład w docstringu przeczy krokom albo innemu przykładowi;
+  - przykład w opisie funkcji przeczy krokom albo innemu przykładowi;
   - brakuje funkcji lub importu, którego prompt wymaga;
   - zadanie da się zrobić tylko przez import spoza „wolno z” albo przez kopię kodu, który już istnieje gdzie indziej;
   - typ albo zachowanie jest niejasne.

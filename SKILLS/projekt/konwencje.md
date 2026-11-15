@@ -5,7 +5,8 @@ Czytają je wykonawcy kodu i testów na starcie. Planner nie powtarza ich w prom
 ## Kod
 
 - Pełne adnotacje typów w każdej funkcji publicznej. Tensory adnotuj jako `torch.Tensor`, a kształt i dtype podawaj w docstringu, np. `idx: LongTensor[B, T]`.
-- Docstringi po polsku, w formacie ze szkieletu promptu.
+- **Opis funkcji** (w skillach: „opis funkcji”) to w tym projekcie docstring po polsku: jedno zdanie, co robi, potem linia `Przykład: <wejście> -> <wyjście>` i przypadki brzegowe w tym samym formacie.
+- **Wspólne przygotowanie testów** to fixture'y pytest w `tests/conftest.py`.
 - Moduły w `src/` nie wypisują niczego (`print`). Postęp treningu raportuje tylko funkcja, która dostaje to jako argument, albo skrypt.
 - Urządzenie (`device`) przychodzi jako argument albo z konfiguracji. Moduł nie wybiera sam CPU ani GPU.
 - Losowość tylko przez przekazany `torch.Generator` albo seed z argumentu.

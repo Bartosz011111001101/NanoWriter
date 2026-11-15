@@ -42,7 +42,7 @@ grep -rniE "slowo1|slowo2" src/ Docs/Kontrakty/
 | --- | --- |
 | Kod modułu | `src/nanowriter/<modul>.py` |
 | Testy jednego promptu | `tests/test_<modul>_<PP>_<nazwa>.py`, podkreślniki zamiast myślników, np. `tests/test_tokenizer_01_pary.py` |
-| Wspólne fixture'y | `tests/conftest.py` |
+| Wspólne przygotowanie testów (fixture'y) | `tests/conftest.py` |
 | Skrypty (tylko wywołują moduły) | `scripts/` |
 | Dane (poza gitem) | `data/` |
 | Plan wstępny projektu | `Docs/Plan/00-wstepny-plan/wstępny_plan.md` |

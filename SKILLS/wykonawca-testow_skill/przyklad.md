@@ -11,7 +11,7 @@ Specyfikacja:
 - Zasoby: katalog tymczasowy.
 
 ### test_csv_export_example
-- Przypadek: przykład z docstringu.
+- Przypadek: przykład z opisu funkcji.
 - `export([{"a": "1", "b": "2"}], "x")` → zwraca `out_dir / "x.csv"`, plik w UTF-8 ma treść dokładnie `"a,b\n1,2\n"`
 ```
 

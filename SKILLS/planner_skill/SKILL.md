@@ -101,7 +101,7 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 - **Nie ruszać:** <co zostaje bez zmian>
 
 ## Ma być
-<szkielet w języku projektu: pełne sygnatury z typami, docstring z przykładem wejście → wyjście, ciało pominięte (np. `...`)>
+<szkielet w języku projektu: pełne sygnatury z typami, opis funkcji (komentarz dokumentujący w formacie z konwencji projektu) z przykładem wejście → wyjście, bez ciała funkcji>
 
 ## Kroki
 1. <wejście albo warunek> → <efekt>
@@ -166,7 +166,7 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 - [ ] Każda nowa funkcja i klasa przeszła „Rozpoznanie kodu”: nic podobnego nie istnieje, a jeśli istnieje, jest w „Do użycia” albo prompt je rozszerza.
 - [ ] Żadna logika nie jest zaplanowana w dwóch promptach naraz.
 - [ ] Każdy import w „Importach” idzie z wyższej warstwy do niższej.
-- [ ] Każdy przykład w docstringu jest policzony ręcznie i się zgadza, łącznie z białymi znakami i typem wyniku.
+- [ ] Każdy przykład w opisie funkcji jest policzony ręcznie i się zgadza, łącznie z białymi znakami i typem wyniku.
 - [ ] Żadne dwa prompty jednej fali nie mają wspólnego pliku w „Plikach”.
 - [ ] Wszystko, czego prompt używa, powstaje we wcześniejszej fali albo już istnieje.
 - [ ] Szkielety zgadzają się z kontraktem.
@@ -188,7 +188,7 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 | Nowa funkcja pomocnicza, choć podobna już istnieje | Uruchom „Szukanie istniejącego kodu” i wpisz znalezioną do „Do użycia”. |
 | Ta sama logika w dwóch promptach różnych modułów | Jeden wcześniejszy prompt w najniższej wspólnej warstwie, w pozostałych „Do użycia”. |
 | Import z wyższej warstwy „bo tam już jest” | Przenieś ten kawałek do niższej warstwy w osobnym, wcześniejszym prompcie. |
-| Szkielet bez typów albo bez przykładu w docstringu | Dopisz typy i przykład wejście → wyjście. |
+| Szkielet bez typów albo bez przykładu w opisie funkcji | Dopisz typy i przykład wejście → wyjście. |
 | Ciało funkcji w „Ma być” albo kod i wywołania bibliotek w „Krokach” | Zostaw sygnaturę z pominiętym ciałem. Kroki zapisz jako „wejście → efekt”. Szczegół wywołania, od którego zależy wynik, przenieś do „Uwagi”. |
 | Klasa bez informacji, po czym dziedziczy i co wywołać z klasy bazowej | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
 | Trudność podniesiona, bo algorytm jest trudny, choć kroki go opisują | Zostaw „łatwe”. Trudność to zakres i to, czy rozwiązanie jest rozpisane. |

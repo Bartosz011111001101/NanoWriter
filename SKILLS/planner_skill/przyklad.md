@@ -71,7 +71,7 @@ EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter
 - `uv run python -c "import tempfile; from pathlib import Path; from app.exporters import EXPORTERS; p = EXPORTERS['csv'](Path(tempfile.mkdtemp())).export([{'a': '1', 'b': '2'}], 'x'); print(repr(p.read_text(encoding='utf-8')))"` wypisuje `'a,b\n1,2\n'`.
 
 ## Propozycja testów (dla testera)
-- przykład z docstringu: treść pliku i zwrócona ścieżka `out_dir/x.csv`
+- przykład z opisu funkcji: treść pliku i zwrócona ścieżka `out_dir/x.csv`
 - pusta lista daje pusty plik
 - `EXPORTERS["csv"] is CsvExporter`, a `EXPORTERS["json"]` bez zmian
 - wartość `"Zażółć"` zapisuje się i odczytuje w UTF-8 bez zmian

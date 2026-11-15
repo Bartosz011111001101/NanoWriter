@@ -27,7 +27,7 @@ piszesz:  Docs/Prompts/NN-zadanie/testy/PP-nazwa.md        specyfikacja testów
 
 `Docs/` jest w `.gitignore`. Listuj przez `ls`, czytaj po pełnej ścieżce.
 
-Każdy prompt kodu ma własny plik testów (nazwa według profilu), więc równolegli wykonawcy testów się nie nadpisują. Wspólne fixture'y zmienia w fali tylko jedna specyfikacja, oznaczona w nagłówku.
+Każdy prompt kodu ma własny plik testów (nazwa według profilu), więc równolegli wykonawcy testów się nie nadpisują. Wspólne przygotowanie testów (dane, obiekty, zasoby używane przez wiele plików testów) zmienia w fali tylko jedna specyfikacja, oznaczona w nagłówku.
 
 ## Model wykonawcy testów
 
@@ -53,17 +53,17 @@ Dla każdego promptu kodu z fali F:
 ### Czy propozycja wystarcza
 
 - Każdy niezmiennik z kontraktu modułu ma test.
-- Każdy przykład z docstringu w szkielecie ma test.
+- Każdy przykład z opisu funkcji w szkielecie ma test.
 - Przypadki brzegowe: puste wejście, jeden element, wartość na granicy zakresu.
 - Typ zwracanej wartości, a także kształt i format struktur danych z kontraktu.
-- Wyjątki, jeśli kontrakt je przewiduje.
+- Błędy (wyjątki albo kody błędów), jeśli kontrakt je przewiduje.
 - Klasy: podklasa działa tam, gdzie kod używa klasy bazowej, a rejestry i fabryki zwracają właściwą klasę.
 - Każdy przypadek z „Kroków” promptu kodu (wejście albo warunek → efekt) ma test.
 - Pozycje z katalogu testów projektu, które dotyczą tego modułu.
 
 ### Szablon specyfikacji testów
 
-**Ty projektujesz test, wykonawca go implementuje.** Projekt to przypadek (co sprawdzasz), dokładne dane wejściowe i dokładny oczekiwany wynik. Implementacja, czyli asercje, fixture'y, parametryzacja i sposób odczytu wyniku, należy do wykonawcy. W specyfikacji nie piszesz kodu testu. Każdy test zapisujesz jako „dane → oczekiwany wynik”, używając tylko nazw ze szkieletu promptu kodu. Sekcja „Przygotowanie” mówi, skąd wziąć importowane nazwy i jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu. Wypełnione przykłady specyfikacji, poprawki i weryfikacji są w `SKILLS/tester_skill/przyklad.md`.
+**Ty projektujesz test, wykonawca go implementuje.** Projekt to przypadek (co sprawdzasz), dokładne dane wejściowe i dokładny oczekiwany wynik. Implementacja, czyli asercje, przygotowanie danych, parametryzacja i sposób odczytu wyniku, należy do wykonawcy. W specyfikacji nie piszesz kodu testu. Każdy test zapisujesz jako „dane → oczekiwany wynik”, używając tylko nazw ze szkieletu promptu kodu. Sekcja „Przygotowanie” mówi, skąd wziąć importowane nazwy i jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu. Wypełnione przykłady specyfikacji, poprawki i weryfikacji są w `SKILLS/tester_skill/przyklad.md`.
 
 ```markdown
 # <PP-nazwa> (testy)
@@ -71,7 +71,7 @@ Dla każdego promptu kodu z fali F:
 - **Trudność:** łatwe | średnie | trudne
 - **Model:** sonnet | opus
 - **Plik testów (tylko ten wolno zmieniać):** <ścieżka według profilu>
-- **Wspólne fixture'y:** nie zmieniaj | zmieniasz: <co dodać>
+- **Wspólne przygotowanie testów:** nie zmieniaj | zmieniasz: <co dodać>
 - **Prompt kodu:** Docs/Prompts/NN-zadanie/kod/<PP-nazwa>.md
 - **Kontrakt:** Docs/Kontrakty/<modul>.md
 - **Ocena propozycji plannera:** wystarcza | uzupełnione: <co dodano>
@@ -79,12 +79,12 @@ Dla każdego promptu kodu z fali F:
 ## Przygotowanie
 - Import: <dokładne linie importów>
 - Obiekty: <jaki obiekt, z jakimi argumentami konstruktora>
-- Zasoby: <katalog tymczasowy, dane testowe, wspólne fixture'y: nazwa i co daje> | brak
+- Zasoby: <katalog tymczasowy, dane testowe, wspólne przygotowanie testów: nazwa i co daje> | brak
 
 ## Testy
 ### <nazwa_testu>
 - Przypadek: <co sprawdza, jedno zdanie>
-- <dane wejściowe> → <dokładny oczekiwany wynik, wyjątek albo warunek>
+- <dane wejściowe> → <dokładny oczekiwany wynik, błąd albo warunek>
 ```
 
 ## Tryb WERYFIKACJA
@@ -96,7 +96,7 @@ Dla każdego promptu kodu z fali F:
 | --- | --- | --- |
 | Test sprawdza coś innego, niż mówi specyfikacja, albo ma literówkę lub zły import | teście | Odpal `wykonawca-testow` (model według tabeli „Model wykonawcy testów”) z poprawioną specyfikacją, uruchom testy ponownie. |
 | Specyfikacja testu przeczy szkieletowi albo kontraktowi | specyfikacji | Popraw specyfikację, potem jak wyżej. |
-| Kod łamie szkielet, docstring albo kontrakt | kodzie | Napisz `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`. Kodu nie poprawiasz. |
+| Kod łamie szkielet, opis funkcji albo kontrakt | kodzie | Napisz `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`. Kodu nie poprawiasz. |
 | Sprawdzenie statyczne zgłasza błąd w pliku kodu (import z wyższej warstwy, cykl, podwójna definicja, skopiowany blok) | kodzie | Poprawka jak wyżej. Przy skopiowanym bloku w „Do użycia” wskaż oryginał. |
 | Sprawdzenie statyczne zgłasza błąd w pliku testów | teście | Jak przy błędzie w teście. |
 | Kod musiał złamać warstwy, bo tak go zaplanowano | kontrakcie | Zgłoś to orkiestratorowi. Rozstrzyga planner. |
@@ -120,7 +120,7 @@ Ten sam układ co prompt kodu (z „Stanem obecnym” opisującym kod po nieudan
 ## Błąd
 - Test: <plik::nazwa_testu> | <błąd sprawdzenia statycznego: plik, linia, kod błędu>
 - Wynik: <dokładny komunikat i wejście, przy którym wystąpił>
-- Oczekiwane według docstringu albo kontraktu: <co powinno być>
+- Oczekiwane według opisu funkcji albo kontraktu: <co powinno być>
 - Hipoteza (pułapka „<nazwa>” albo własna): <przyczyna>
 
 ## Stan obecny

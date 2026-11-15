@@ -10,7 +10,7 @@ Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład
 - **Trudność:** łatwe
 - **Model:** sonnet
 - **Plik testów (tylko ten wolno zmieniać):** tests/test_exporters_02_eksport_csv.py
-- **Wspólne fixture'y:** nie zmieniaj
+- **Wspólne przygotowanie testów:** nie zmieniaj
 - **Prompt kodu:** Docs/Prompts/05-eksport/kod/02-eksport-csv.md
 - **Kontrakt:** Docs/Kontrakty/exporters.md
 - **Ocena propozycji plannera:** uzupełnione: dodano test, że JsonExporter został w rejestrze
@@ -22,7 +22,7 @@ Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład
 
 ## Testy
 ### test_csv_export_example
-- Przypadek: przykład z docstringu.
+- Przypadek: przykład z opisu funkcji.
 - `export([{"a": "1", "b": "2"}], "x")` → zwraca `out_dir / "x.csv"`, plik w UTF-8 ma treść dokładnie `"a,b\n1,2\n"`
 
 ### test_csv_export_empty
@@ -46,7 +46,7 @@ Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład
 ## Błąd
 - Test: `tests/test_exporters_02_eksport_csv.py::test_csv_export_empty`
 - Wynik: `IndexError: list index out of range` dla `export([], "x")`
-- Oczekiwane według docstringu: pusty plik
+- Oczekiwane według opisu funkcji: pusty plik
 - Hipoteza (pułapka „Puste wejście”): `records[0]` jest czytane przed sprawdzeniem pustej listy.
 
 ## Stan obecny
