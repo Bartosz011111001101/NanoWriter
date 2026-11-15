@@ -1,44 +1,57 @@
 ---
 name: wykonawca-kodu_skill
-description: Używaj, gdy dostajesz do wykonania prompt kodu albo poprawki z Docs/Prompts/NN-zadanie/kod/ lub /poprawki/ w projekcie NanoWriter.
+description: Używaj, gdy dostajesz do wykonania prompt kodu albo poprawki z Docs/Prompts/NN-zadanie/kod/ lub /poprawki/.
 ---
 
-# Wykonawca kodu w NanoWriter
+# Wykonawca kodu
 
 Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i zapisujesz, co zrobiłeś.
 
 ## Kroki
 
-1. Przeczytaj prompt (pełna ścieżka od orkiestratora) i kontrakt wskazany w nagłówku. `Docs/` jest w `.gitignore`, więc czytaj po pełnej ścieżce.
-2. Przeczytaj pliki z listy „Pliki”, jeśli już istnieją. Nie usuwaj kodu, którego prompt nie dotyczy.
-3. Zaimplementuj szkielet:
-   - nazwy, argumenty, typy i zwracane wartości bez zmian;
+1. Przeczytaj `SKILLS/projekt/profil.md` (komendy) i `SKILLS/projekt/konwencje.md` (styl kodu).
+2. Przeczytaj prompt (pełna ścieżka od zlecającego). `Docs/` jest w `.gitignore`, więc czytaj po pełnej ścieżce. Kontrakt z nagłówka czytaj tylko wtedy, gdy prompt czegoś nie rozstrzyga.
+3. Przeczytaj pliki z listy „Pliki”, jeśli już istnieją, i porównaj je z sekcją „Stan obecny”.
+4. Zaimplementuj „Ma być” według „Kroków”:
+   - nazwy, argumenty, typy, klasy bazowe i zwracane wartości bez zmian;
+   - kod w miejscu z „Punktu wpięcia”, importy z „Zależności”;
    - docstringi zostają tak, jak są w szkielecie;
-   - przykłady z docstringów muszą działać.
-4. Wykonaj sprawdzenie z „Gotowe, gdy”. Komendy Pythona uruchamiaj przez `uv run`.
-5. Zapisz raport (szablon niżej).
+   - przykłady z docstringów muszą działać;
+   - każdy wpis z sekcji „Uwaga” ma być obsłużony w kodzie.
+5. Wykonaj sprawdzenie z „Gotowe, gdy” i porównaj wynik z oczekiwanym.
+6. Zapisz raport (szablon niżej).
+
+## Prompt trudny
+
+Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektujesz tylko tę część. Publiczne sygnatury i niezmienniki z promptu zostają bez zmian. Swój projekt opisujesz w raporcie w polu „Projekt”, bo planner pisze na jego podstawie następne fale.
 
 ## Granice
 
 - Zmieniasz tylko pliki z listy „Pliki” i swój raport w `Docs/Postep/`.
-- Nie tworzysz ani nie zmieniasz niczego w `tests/`. Testy pisze kto inny.
-- Przy poprawce możesz uruchomić `uv run pytest <plik>`, ale testów nie zmieniasz.
-- Nie dodajesz bibliotek (`uv add`), jeśli prompt tego nie mówi.
+- Nie ruszasz niczego z pola „Nie ruszać”.
+- Nie tworzysz ani nie zmieniasz testów. Testy pisze kto inny.
+- Przy poprawce możesz uruchomić testy komendą z profilu, ale ich nie zmieniasz.
+- Nie dodajesz bibliotek, jeśli prompt tego nie mówi.
 - Nie robisz commitów.
-- Szkielet nie da się zaimplementować tak, jak jest opisany (sprzeczny przykład, brak potrzebnej funkcji, niejasny typ)? Nie wymyślaj własnej wersji. Zapisz raport z wynikiem „zablokowane” i opisz problem.
+- **Zablokowane.** Kończysz raportem z wynikiem „zablokowane” i opisem problemu, zamiast wymyślać własną wersję, gdy:
+  - „Stan obecny” nie zgadza się z kodem w pliku (inna sygnatura, brak klasy, inna klasa bazowa);
+  - przykład w docstringu przeczy krokom albo innemu przykładowi;
+  - brakuje funkcji lub importu, którego prompt wymaga;
+  - typ albo zachowanie jest niejasne.
 
 ## Raport
 
-Ścieżka: `Docs/Postep/NN-zadanie/kod/<nazwa pliku promptu>`, np. prompt `kod/01-pary.md` → `Postep/NN-zadanie/kod/01-pary.md`, poprawka `poprawki/01-pary-1.md` → `Postep/NN-zadanie/kod/01-pary-1.md`.
+Ścieżka: `Docs/Postep/NN-zadanie/kod/<nazwa pliku promptu>`, np. prompt `kod/02-eksport-csv.md` → `Postep/NN-zadanie/kod/02-eksport-csv.md`, poprawka `poprawki/02-eksport-csv-1.md` → `Postep/NN-zadanie/kod/02-eksport-csv-1.md`.
 
 ```markdown
-# 01-pary
+# 02-eksport-csv
 
 - **Wynik:** zrobione | zablokowane
-- **Zmienione pliki:** src/nanowriter/tokenizer.py
-- **Sprawdzenie:** `uv run python -c "..."` → `{(1, 2): 2, (2, 1): 1}`
+- **Zmienione pliki:** src/app/exporters.py
+- **Sprawdzenie:** `<komenda z "Gotowe, gdy">` → `'a,b\n1,2\n'`
 - **Odstępstwa od szkieletu:** brak | <co i dlaczego>
-- **Uwagi dla następnych fal:** brak | <np. funkcja X przyjmuje już też pustą listę>
+- **Projekt:** nie dotyczy | <tylko prompt trudny: klasy, funkcje pomocnicze, przepływ danych>
+- **Uwagi dla następnych fal:** brak | <np. export przyjmuje też pustą listę>
 ```
 
 Odpowiedź dla zlecającego: ścieżka raportu i linia „Wynik”.

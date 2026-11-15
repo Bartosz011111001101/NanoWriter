@@ -1,11 +1,20 @@
 ---
 name: planner_skill
-description: Używaj, gdy zadanie NanoWriter trzeba rozpisać na fale i prompty ze szkieletami funkcji dla wykonawców (Haiku, Sonnet, Opus), ocenić trudność promptu, oszacować rozmiar modelu, danych albo pamięci GPU, albo napisać lub zmienić kontrakt modułu.
+description: Używaj, gdy zadanie trzeba rozpisać na fale i prompty kodu dla wykonawców (Haiku, Sonnet, Opus), ocenić trudność promptu, opisać wykonawcy stan obecny kodu albo napisać lub zmienić kontrakt modułu.
 ---
 
-# Planowanie w NanoWriter
+# Planowanie
 
-Wykonawcami są głównie Haiku i Sonnet. Prompt ma być tak kompletny, żeby wykonawca niczego nie wymyślał: nazwy funkcji, argumenty, typy i zwracane wartości daje szkielet.
+Prompt kodu daje wykonawcy całą wiedzę potrzebną do pracy: co jest teraz w kodzie, co ma powstać, gdzie to wpiąć i na co uważać. Wykonawca nie przeszukuje repozytorium i nie projektuje niczego, czego prompt mu wprost nie zleca. Dobrze rozpisany prompt zrobi Haiku, nawet jeśli to cała klasa z dziedziczeniem albo trudny algorytm.
+
+## Na start czytasz
+
+1. `SKILLS/projekt/profil.md`: stack, komendy, układ repozytorium, mapa modułów, etapy, decyzje użytkownika.
+2. Pliki pułapek wymienione w profilu (`SKILLS/projekt/pulapki/`).
+3. Plan wstępny z profilu, kontrakty z `Docs/Kontrakty/` i raporty z `Docs/Postep/` poprzednich zadań.
+4. **Aktualny kod każdego pliku, który zadanie zmienia.** Z niego, a nie z pamięci ani z kontraktu, piszesz sekcję „Stan obecny”.
+
+`Docs/` jest w `.gitignore`, więc Grep i Glob mogą go pomijać. Listuj przez `ls`, czytaj po pełnej ścieżce.
 
 ## Co tworzysz
 
@@ -15,44 +24,130 @@ Docs/Prompts/NN-zadanie/kod/PP-nazwa.md      jeden plik na kawałek pracy
 Docs/Kontrakty/<modul>.md                    nowe albo zmienione kontrakty
 ```
 
-`Docs/` jest w `.gitignore`. Listuj przez `ls`, czytaj po pełnej ścieżce. Promptów testów nie piszesz, robi to tester. Ty w każdym prompcie kodu zostawiasz sekcję „Propozycja testów”.
-
-## Mapa modułów
-
-Każdy moduł to plik `src/nanowriter/<modul>.py` i kontrakt `Docs/Kontrakty/<modul>.md`.
-
-| Moduł | Odpowiada za | Etap |
-| --- | --- | --- |
-| `data` | pobranie i czyszczenie tekstu, podział train/val | 2 |
-| `tokenizer` | trening BPE, `encode`/`decode`, zapis słownika | 1 (znakowy), 3 (BPE) |
-| `dataset` | pliki `.bin` z tokenami, losowanie batchy `(x, y)` | 3 |
-| `model` | transformer: konfiguracja, `forward`, inicjalizacja wag | 1 (bigram), 4 |
-| `train` | pętla treningu, optymalizator, harmonogram LR, checkpointy | 1, 5 |
-| `sample` | generowanie: temperatura, top-k, top-p, KV cache | 1, 6 |
-| `evaluate` | strata walidacyjna, perplexity, stały zestaw promptów | 7 |
-
-Skrypty w `scripts/` tylko wywołują moduły, bez własnej logiki.
+Promptów testów nie piszesz, robi to tester. W każdym prompcie kodu zostawiasz sekcję „Propozycja testów”.
 
 ## Cięcie na prompty i fale
 
-- Jeden prompt to jedna do trzech funkcji albo jedna mała klasa.
-- **Fala** to prompty, które mogą iść równolegle. Prompty w jednej fali:
+- Jeden prompt to jeden spójny kawałek: kilka funkcji albo klasa z metodami.
+- **Fala** to prompty, które idą równolegle. Prompty w jednej fali:
   - nie zmieniają tych samych plików;
-  - nie zależą od siebie (żaden nie używa funkcji, którą pisze inny w tej samej fali).
-- Prompt korzystający z funkcji z wcześniejszego promptu idzie do późniejszej fali.
-- Gdy dwa niezależne prompty muszą zmienić ten sam plik, daj je do różnych fal.
-- Najpierw najprostsza działająca wersja, optymalizacje (`torch.compile`, bf16, KV cache) w późniejszych falach.
-- Ostatnia fala zadania zawiera test bramki z `SKILLS/orchestrator_skill/SKILL.md`, jeśli zadanie zamyka etap.
+  - nie zależą od siebie (żaden nie używa tego, co pisze inny prompt tej samej fali).
+- Prompt korzystający z wyniku wcześniejszego promptu idzie do późniejszej fali.
+- **Jak najmniej fal.** Każda fala to pełna runda testów i weryfikacji. Układaj fale tak, żeby w każdej pracowało kilka modułów naraz, zamiast dawać jeden moduł na falę.
+- Gdy jeden plik dostaje w zadaniu więcej niż 3 prompty, zaproponuj podział modułu na mniejsze pliki. Jeśli moduł ma już kod, wpisz to do „Otwartych pytań”.
+- Najpierw najprostsza działająca wersja, optymalizacje w późniejszych falach.
+- Ostatnia fala zawiera test bramki z profilu, jeśli zadanie zamyka etap.
 
 ## Trudność
 
-| Trudność | Model | Kiedy | Przykłady |
-| --- | --- | --- | --- |
-| łatwe | Haiku | Szkielet kompletny, ciało wynika wprost z kroków, bez decyzji projektowych. | zliczanie par BPE, podział train/val, zapis tablicy do `.bin` |
-| średnie | Sonnet | Kilka współpracujących funkcji albo klasa, operacje na kształtach tensorów, drobne decyzje wewnątrz szkieletu. | multi-head attention, pętla treningu z ewaluacją, top-k/top-p |
-| trudne | Opus | Łatwo o cichy błąd w poprawności albo wydajności. | KV cache zgodny z wersją bez cache, wznowienie treningu ze stanem RNG, szybki trening BPE na dużym korpusie |
+Trudność zależy od zakresu zmian i od tego, czy umiesz rozwiązanie rozpisać z góry. Złożoność samego algorytmu jej nie podnosi. Sprawdzaj wiersze od góry i bierz pierwszy pasujący:
 
-Wahasz się między łatwe a średnie? Podziel prompt na mniejsze, zamiast podnosić trudność. „Trudne” to wyjątek.
+| Trudność | Model kodu | Warunek |
+| --- | --- | --- |
+| trudne | Opus | Nie umiesz rozpisać rozwiązania z góry, bo trzeba je zaprojektować albo zbadać, **albo** prompt zmienia więcej niż 5 plików. |
+| średnie | Sonnet | Prompt zmienia 3–5 plików **albo** przerabia istniejącą logikę, z której korzystają inne moduły, i zmiany muszą się zgadzać w kilku miejscach. |
+| łatwe | Haiku | Do 2 plików, a rozwiązanie jest rozpisane w całości w sekcjach „Stan obecny”, „Ma być” i „Kroki”. |
+
+Testy nigdy nie idą na Haiku. Model wykonawcy testów dobiera tester (minimum Sonnet).
+
+Wahasz się między łatwe a średnie? Rozpisz dokładniej „Stan obecny” i „Kroki” albo podziel prompt. „Trudne” to wyjątek.
+
+## Szablon: prompt kodu
+
+Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. Pole, które nie dotyczy promptu, ma wartość „brak”.
+
+| Sekcja | Zawartość |
+| --- | --- |
+| Nagłówek | Trudność, Fala, Zależy od, Pliki (tylko te wolno zmieniać), Kontrakt |
+| Cel | Jedno zdanie: co powstaje i po co. |
+| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z `super()`. **Zależności:** dokładne linie importów i kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
+| Ma być | Szkielet docelowy: pełne sygnatury z typami, docstring z przykładem wejście → wyjście. Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). |
+| Kroki | Łatwe: każdy krok mechaniczny, w kolejności. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności. |
+| Uwaga | Wpisy z plików pułapek, które dotyczą tego promptu, skopiowane w całości. |
+| Gotowe, gdy | Komenda sprawdzająca i oczekiwany wynik (zasady niżej). |
+| Propozycja testów | Lista przypadków dla testera z dokładnymi wejściami i wynikami. |
+
+**Prompt trudny.** W „Ma być” ustalasz granice: publiczne sygnatury, niezmienniki i to, co ma przejść. Środek oznaczasz jako „Do zaprojektowania przez wykonawcę: …”. Wykonawca opisuje swój projekt w raporcie, a Ty bierzesz go do promptów następnych fal.
+
+**Gotowe, gdy.** Jedna linia, komenda z profilu. Działa w kilka sekund na CPU, bez pobierania danych i bez zapisu poza katalogiem tymczasowym. W kodzie wewnątrz `-c "..."` tylko ASCII i cudzysłowy pojedyncze. Nigdy nie wymaga testów, bo wykonawca kodu ich nie pisze.
+
+### Przykład promptu
+
+````markdown
+# 02-eksport-csv
+
+- **Trudność:** łatwe
+- **Fala:** 2
+- **Zależy od:** 01-eksporter-bazowy
+- **Pliki (tylko te wolno zmieniać):** src/app/exporters.py
+- **Kontrakt:** Docs/Kontrakty/exporters.md
+
+## Cel
+Eksport rekordów do pliku CSV, wybierany po nazwie formatu `"csv"`.
+
+## Stan obecny
+- **Pliki:** `src/app/exporters.py` istnieje (fala 1). Nowych plików brak.
+- **Struktura `src/app/exporters.py`:**
+  ```python
+  from abc import ABC, abstractmethod
+  from pathlib import Path
+
+  class Exporter(ABC):
+      extension: str
+      def __init__(self, out_dir: Path) -> None: ...      # ustawia self.out_dir
+      def target_path(self, name: str) -> Path: ...      # out_dir / f"{name}.{extension}"
+      @abstractmethod
+      def export(self, records: list[dict[str, str]], name: str) -> Path: ...
+
+  class JsonExporter(Exporter): ...                     # extension = "json"
+
+  EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter}
+  ```
+- **Klasy:** `CsvExporter` dziedziczy po `Exporter`. Konstruktora nie nadpisuje, nadpisuje tylko `export`.
+- **Zależności:** dopisz `import csv` na górze pliku. Z `EXPORTERS` korzysta `src/app/cli.py` (`EXPORTERS[fmt](out_dir).export(records, name)`), więc nazwa i typ słownika zostają.
+- **Współbieżność:** brak.
+- **Dane i stan:** CSV w UTF-8, separator `,`, pierwszy wiersz to nagłówki w kolejności kluczy pierwszego rekordu.
+- **Punkt wpięcia:** klasa pod `JsonExporter`, wpis `"csv": CsvExporter` w `EXPORTERS`.
+- **Nie ruszać:** `Exporter`, `JsonExporter`.
+
+## Ma być
+```python
+class CsvExporter(Exporter):
+    """Zapisuje rekordy do pliku CSV w out_dir i zwraca jego ścieżkę.
+
+    Przykład: export([{"a": "1", "b": "2"}], "x") -> out_dir/x.csv o treści "a,b\n1,2\n"
+    Pusta lista -> pusty plik out_dir/x.csv
+    """
+    extension = "csv"
+
+    def export(self, records: list[dict[str, str]], name: str) -> Path:
+        ...
+
+EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter}
+```
+
+## Kroki
+1. Dopisz `import csv` do importów.
+2. Pod `JsonExporter` dodaj klasę `CsvExporter` z `extension = "csv"`.
+3. W `export`: `path = self.target_path(name)`, otwórz `path` w trybie `"w"` z `encoding="utf-8", newline=""`.
+4. Gdy `records` jest pusta, zostaw plik pusty i zwróć `path`.
+5. W przeciwnym razie: `csv.DictWriter(f, fieldnames=list(records[0]), lineterminator="\n")`, potem `writeheader()` i `writerows(records)`.
+6. Zwróć `path`.
+7. Dopisz `"csv": CsvExporter` do `EXPORTERS`.
+
+## Uwaga
+- **Moduł csv.** Na Windowsie puste linie między wierszami albo `\r\n` zamiast `\n` → plik otwarty bez `newline=""` i domyślny `lineterminator` → `open(..., newline="")` i `csv.writer(f, lineterminator="\n")`.
+- **Puste wejście.** `IndexError` dla pustej listy → kod zakłada co najmniej jeden element → obsłuż pusty przypadek na początku funkcji, zgodnie z docstringiem.
+
+## Gotowe, gdy
+- `uv run python -c "import tempfile; from pathlib import Path; from app.exporters import EXPORTERS; p = EXPORTERS['csv'](Path(tempfile.mkdtemp())).export([{'a': '1', 'b': '2'}], 'x'); print(repr(p.read_text(encoding='utf-8')))"` wypisuje `'a,b\n1,2\n'`.
+
+## Propozycja testów (dla testera)
+- przykład z docstringu: treść pliku i zwrócona ścieżka `out_dir/x.csv`
+- pusta lista daje pusty plik
+- `EXPORTERS["csv"] is CsvExporter`, a `EXPORTERS["json"]` bez zmian
+- wartość `"Zażółć"` zapisuje się i odczytuje w UTF-8 bez zmian
+````
 
 ## Szablon: plan.md
 
@@ -65,71 +160,45 @@ Wahasz się między łatwe a średnie? Podziel prompt na mniejsze, zamiast podno
 ## Fale
 | Fala | Prompt | Trudność | Pliki |
 | --- | --- | --- | --- |
-| 1 | 01-pary | łatwe | src/nanowriter/tokenizer.py |
-| 1 | 02-podzial | łatwe | src/nanowriter/data.py |
-| 2 | 03-merge | średnie | src/nanowriter/tokenizer.py |
+| 1 | 01-eksporter-bazowy | łatwe | src/app/exporters.py |
+| 1 | 02-konfiguracja | łatwe | src/app/config.py |
+| 2 | 03-eksport-csv | łatwe | src/app/exporters.py |
 
 ## Kontrakty
-- utworzone/zmienione: Docs/Kontrakty/tokenizer.md
+- utworzone/zmienione: Docs/Kontrakty/exporters.md
 
 ## Otwarte pytania
 - <decyzja dla użytkownika> albo "brak"
 ```
 
-## Szablon: prompt kodu
-
-Sekcje w tej kolejności. Każda funkcja w szkielecie ma pełną sygnaturę z typami i docstring z przykładem wejście → wyjście.
-
-````markdown
-# 01-pary
-
-- **Trudność:** łatwe
-- **Fala:** 1
-- **Zależy od:** brak
-- **Pliki (tylko te wolno zmieniać):** src/nanowriter/tokenizer.py
-- **Kontrakt:** Docs/Kontrakty/tokenizer.md
-
-## Cel
-Zliczanie sąsiednich par id, potrzebne do wyboru następnego merge'a BPE.
-
-## Szkielet
-```python
-def get_pair_counts(ids: list[int]) -> dict[tuple[int, int], int]:
-    """Zlicza wystąpienia sąsiednich par id.
-
-    Przykład: [1, 2, 1, 2] -> {(1, 2): 2, (2, 1): 1}
-    Pusta lista albo jeden element -> {}
-    """
-```
-
-## Kroki
-1. Utwórz pusty słownik.
-2. Przejdź po parach `zip(ids, ids[1:])` i zwiększaj licznik każdej pary.
-3. Zwróć słownik.
-
-## Gotowe, gdy
-- `uv run python -c "from nanowriter.tokenizer import get_pair_counts; print(get_pair_counts([1,2,1,2]))"` wypisuje `{(1, 2): 2, (2, 1): 1}`.
-
-## Propozycja testów (dla testera)
-- przykład z docstringu
-- pusta lista i jeden element dają `{}`
-- para powtórzona trzy razy pod rząd: `[5, 5, 5, 5]` -> `{(5, 5): 3}`
-````
-
 ## Szablon: kontrakt
 
-Plik `Docs/Kontrakty/<modul>.md`, sekcje: Odpowiedzialność, Publiczne API (sygnatury z typami), Tensory (kształt i dtype, np. `idx: LongTensor[B, T]`), Pliki (formaty), Niezmienniki (co tester ma sprawdzić), Zmiany (data + opis). Szkielety w promptach muszą być zgodne z kontraktem. Zmiana kontraktu to wpis w „Zmiany”.
+Plik `Docs/Kontrakty/<modul>.md`, sekcje:
 
-## Liczby do planowania
+- **Odpowiedzialność**
+- **Publiczne API:** sygnatury z typami, klasy z dziedziczeniem.
+- **Struktury danych:** kształty, typy i formaty (np. tensor `idx: LongTensor[B, T]`, rekord `dict[str, str]`).
+- **Pliki:** formaty na dysku.
+- **Niezmienniki:** co tester ma sprawdzić.
+- **Zmiany:** data i opis.
 
-- **Parametry transformera** ≈ `12 · n_layer · d_model²` plus embedding `vocab_size · d_model` (raz, gdy wagi wyjścia są współdzielone). Przykład: 6 warstw, `d_model=384`, vocab 8192 → ≈ 14M.
-- **Dane (Chinchilla):** ok. 20 tokenów na parametr, czyli 14M parametrów → ~280M tokenów.
-- **Pamięć GPU na wagi i AdamW (fp32):** ok. 16 bajtów na parametr. Reszta to aktywacje, które rosną z `batch · kontekst · d_model · n_layer`. Gdy brakuje pamięci: mniejszy batch i akumulacja gradientów.
-- **Start etapu 4:** 4 warstwy, 4 głowice, `d_model=256`, kontekst 256.
+Szkielety w promptach muszą być zgodne z kontraktem. Każda zmiana kontraktu to wpis w „Zmiany”.
+
+## Przed oddaniem planu
+
+Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
+
+- [ ] „Stan obecny” każdego promptu jest przepisany z aktualnego kodu albo z szkieletu promptu wcześniejszej fali, jeśli kod jeszcze nie istnieje.
+- [ ] Każdy przykład w docstringu jest policzony ręcznie i się zgadza, łącznie z białymi znakami i typem wyniku.
+- [ ] Żadne dwa prompty jednej fali nie mają wspólnego pliku w „Plikach”.
+- [ ] Wszystko, czego prompt używa, powstaje we wcześniejszej fali albo już istnieje.
+- [ ] Szkielety zgadzają się z kontraktem.
+- [ ] Trudność wynika z tabeli, czyli liczby plików i tego, czy rozwiązanie jest rozpisane.
+- [ ] Komenda „Gotowe, gdy” spełnia zasady.
 
 ## Odpowiedź dla orkiestratora
 
-1. Ścieżka planu i lista fal (numer fali i nazwy promptów).
+1. Ścieżka planu i lista fal (numer fali, nazwy promptów, trudności).
 2. Utworzone i zmienione kontrakty.
 3. Otwarte pytania albo „brak”.
 
@@ -137,8 +206,11 @@ Plik `Docs/Kontrakty/<modul>.md`, sekcje: Odpowiedzialność, Publiczne API (syg
 
 | Błąd | Poprawka |
 | --- | --- |
-| Szkielet bez typów albo bez przykładu w docstringu | Haiku zacznie zgadywać. Dopisz typy i przykład wejście → wyjście. |
+| „Stan obecny” napisany z pamięci albo z kontraktu | Przeczytaj plik i przepisz zarys z kodu. Wykonawca zablokuje się na pierwszej niezgodności. |
+| Szkielet bez typów albo bez przykładu w docstringu | Dopisz typy i przykład wejście → wyjście. |
+| Klasa bez informacji, po czym dziedziczy i co wywołać z `super()` | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
+| Trudność podniesiona, bo algorytm jest trudny, choć kroki go opisują | Zostaw „łatwe”. Trudność to zakres i to, czy rozwiązanie jest rozpisane. |
+| Jeden moduł na falę, przez co fal jest dużo | Połącz w jednej fali prompty z różnych modułów. |
 | Dwa prompty jednej fali zmieniają ten sam plik | Przenieś jeden do następnej fali. |
-| Prompt używa funkcji z promptu tej samej fali | Przenieś go do następnej fali. |
-| „Gotowe, gdy” wymaga testów | Wykonawca kodu nie pisze testów. Daj komendę `uv run python -c ...`. |
-| Decyzja użytkownika podjęta przez plannera | Przenieś ją do „Otwarte pytania”. |
+| „Gotowe, gdy” wymaga testów albo trwa minuty | Daj jednolinijkową komendę z profilu, działającą w kilka sekund. |
+| Decyzja użytkownika podjęta przez plannera | Przenieś ją do „Otwartych pytań”. |
