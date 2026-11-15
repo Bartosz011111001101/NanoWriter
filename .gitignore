@@ -29,3 +29,6 @@ Thumbs.db
 
 # Sekrety
 .env
+
+# Dokumentacja robocza (tylko lokalnie)
+Docs/
