@@ -16,24 +16,10 @@ Dostajesz ścieżkę do jednej specyfikacji testów. Piszesz dokładnie te testy
    - nazwy testów dokładnie takie jak w specyfikacji;
    - wejścia i oczekiwane wyniki dokładnie takie jak w specyfikacji.
 4. Sprawdź składnię, a potem uruchom „Sprawdzenie statyczne jednego pliku” na pliku testów. Obie komendy są w profilu. Popraw zgłoszone błędy w swoim pliku.
-5. Uruchom plik testów komendą z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc `ImportError` albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
+5. Uruchom plik testów komendą z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc błąd importu albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
 6. Zapisz raport (szablon niżej).
 
-## Przykład
-
-Specyfikacja z testem `test_csv_export_example` (wejście `CsvExporter(tmp_path).export([{"a": "1", "b": "2"}], "x")`, oczekiwane: ścieżka `tmp_path / "x.csv"` i treść `"a,b\n1,2\n"`) daje taki kod:
-
-```python
-from app.exporters import CsvExporter
-
-
-def test_csv_export_example(tmp_path):
-    path = CsvExporter(tmp_path).export([{"a": "1", "b": "2"}], "x")
-
-    assert path == tmp_path / "x.csv"
-    # Dokładna treść, łącznie z końcami linii: "\r\n" to też błąd.
-    assert path.read_text(encoding="utf-8") == "a,b\n1,2\n"
-```
+Przykład zamiany specyfikacji na test: `SKILLS/wykonawca-testow_skill/przyklad.md`.
 
 ## Granice
 
@@ -44,15 +30,15 @@ def test_csv_export_example(tmp_path):
 
 ## Raport
 
-Ścieżka: `Docs/Postep/NN-zadanie/testy/<nazwa pliku specyfikacji>`, np. `testy/02-eksport-csv.md` → `Postep/NN-zadanie/testy/02-eksport-csv.md`.
+Ścieżka: `Docs/Postep/NN-zadanie/testy/<nazwa pliku specyfikacji>`. Specyfikacja `testy/PP-nazwa.md` → `Postep/NN-zadanie/testy/PP-nazwa.md`.
 
 ```markdown
-# 02-eksport-csv (testy)
+# <PP-nazwa> (testy)
 
 - **Wynik:** zrobione | zablokowane
-- **Plik testów:** tests/test_exporters_02_eksport_csv.py
-- **Liczba testów:** 3
-- **Uruchomienie:** `<komenda z profilu>` → ImportError (kod jeszcze nie istnieje) | 3 passed | ...
+- **Plik testów:** <ścieżka>
+- **Liczba testów:** <liczba>
+- **Uruchomienie:** `<komenda z profilu>` → <błąd importu (kod jeszcze nie istnieje) | liczba passed, failed>
 - **Uwagi:** brak | <niejasność w specyfikacji, brakujący przypadek>
 ```
 

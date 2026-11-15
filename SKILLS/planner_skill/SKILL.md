@@ -73,101 +73,52 @@ Wahasz się między łatwe a średnie? Rozpisz dokładniej „Stan obecny” i �
 
 ## Szablon: prompt kodu
 
-Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. Pole, które nie dotyczy promptu, ma wartość „brak”.
-
-| Sekcja | Zawartość |
-| --- | --- |
-| Nagłówek | Trudność, Fala, Zależy od, Pliki (tylko te wolno zmieniać), Kontrakt |
-| Cel | Jedno zdanie: co powstaje i po co. |
-| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z klasy bazowej. **Do użycia:** istniejące funkcje, klasy i stałe z całego projektu, które wykonawca ma wywołać zamiast pisać własne, z sygnaturą i importem (wynik „Rozpoznania kodu”). **Importy:** dokładne linie do dopisania, „wolno z” i „nie wolno z” (moduły według warstw) oraz kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
-| Ma być | Szkielet docelowy: pełne sygnatury z typami, docstring z przykładem wejście → wyjście. Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). |
-| Kroki | Łatwe: każdy krok mechaniczny, w kolejności. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności. |
-| Uwaga | Wpisy z plików pułapek, które dotyczą tego promptu, skopiowane w całości. |
-| Gotowe, gdy | Komenda sprawdzająca i oczekiwany wynik (zasady niżej). |
-| Propozycja testów | Lista przypadków dla testera z dokładnymi wejściami i wynikami. |
-
-**Prompt trudny.** W „Ma być” ustalasz granice: publiczne sygnatury, niezmienniki i to, co ma przejść. Środek oznaczasz jako „Do zaprojektowania przez wykonawcę: …”. Wykonawca opisuje swój projekt w raporcie, a Ty bierzesz go do promptów następnych fal.
-
-**Gotowe, gdy.** Jedna linia, komenda z profilu. Działa w kilka sekund na CPU, bez pobierania danych i bez zapisu poza katalogiem tymczasowym. W kodzie wewnątrz `-c "..."` tylko ASCII i cudzysłowy pojedyncze. Nigdy nie wymaga testów, bo wykonawca kodu ich nie pisze.
-
-### Przykład promptu
+Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. Pole, które nie dotyczy promptu, ma wartość „brak”. Przed pierwszym promptem zadania przeczytaj `SKILLS/planner_skill/przyklad.md`, bo pokazuje poziom szczegółu, który wystarcza Haiku.
 
 ````markdown
-# 02-eksport-csv
+# <PP-nazwa>
 
-- **Trudność:** łatwe
-- **Fala:** 2
-- **Zależy od:** 01-eksporter-bazowy
-- **Pliki (tylko te wolno zmieniać):** src/app/exporters.py
-- **Kontrakt:** Docs/Kontrakty/exporters.md
+- **Trudność:** łatwe | średnie | trudne
+- **Fala:** <F>
+- **Zależy od:** <PP-nazwa, ...> | brak
+- **Pliki (tylko te wolno zmieniać):** <ścieżki>
+- **Kontrakt:** Docs/Kontrakty/<modul>.md
 
 ## Cel
-Eksport rekordów do pliku CSV, wybierany po nazwie formatu `"csv"`.
+<co powstaje i po co, jedno zdanie>
 
 ## Stan obecny
-- **Pliki:** `src/app/exporters.py` istnieje (fala 1). Nowych plików brak.
-- **Struktura `src/app/exporters.py`:**
-  ```python
-  from abc import ABC, abstractmethod
-  from pathlib import Path
-
-  class Exporter(ABC):
-      extension: str
-      def __init__(self, out_dir: Path) -> None: ...      # ustawia self.out_dir
-      def target_path(self, name: str) -> Path: ...      # out_dir / f"{name}.{extension}"
-      @abstractmethod
-      def export(self, records: list[dict[str, str]], name: str) -> Path: ...
-
-  class JsonExporter(Exporter): ...                     # extension = "json"
-
-  EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter}
-  ```
-- **Klasy:** `CsvExporter` dziedziczy po `Exporter`. Konstruktora nie nadpisuje, nadpisuje tylko `export`.
-- **Do użycia:** `self.target_path(name) -> Path` z `Exporter`. Ścieżki nie składaj ręcznie.
-- **Importy:** dopisz `import csv` na górze pliku. Wolno z: biblioteki standardowej. Nie wolno z: `app.cli`. Z `EXPORTERS` korzysta `src/app/cli.py` (`EXPORTERS[fmt](out_dir).export(records, name)`), więc nazwa i typ słownika zostają.
-- **Współbieżność:** brak.
-- **Dane i stan:** CSV w UTF-8, separator `,`, pierwszy wiersz to nagłówki w kolejności kluczy pierwszego rekordu.
-- **Punkt wpięcia:** klasa pod `JsonExporter`, wpis `"csv": CsvExporter` w `EXPORTERS`.
-- **Nie ruszać:** `Exporter`, `JsonExporter`.
+- **Pliki:** <które istnieją i z której fali, które są nowe>
+- **Struktura `<plik>`:** <zarys każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, bez ciał>
+- **Klasy:** <klasa: po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z klasy bazowej> | brak
+- **Do użycia:** <istniejąca funkcja, klasa albo stała: sygnatura, import, do czego jej użyć> | brak
+- **Importy:** <linie do dopisania>. Wolno z: <moduły>. Nie wolno z: <moduły>. Korzysta z tego kodu: <kto i jak wywołuje>
+- **Współbieżność:** <co działa gdzie (worker, wątek, proces, async), jak się komunikuje, start i stop> | brak
+- **Dane i stan:** <formaty plików, konfiguracja, zmienne środowiska> | brak
+- **Punkt wpięcia:** <gdzie dokładnie dopisać>
+- **Nie ruszać:** <co zostaje bez zmian>
 
 ## Ma być
-```python
-class CsvExporter(Exporter):
-    """Zapisuje rekordy do pliku CSV w out_dir i zwraca jego ścieżkę.
-
-    Przykład: export([{"a": "1", "b": "2"}], "x") -> out_dir/x.csv o treści "a,b\n1,2\n"
-    Pusta lista -> pusty plik out_dir/x.csv
-    """
-    extension = "csv"
-
-    def export(self, records: list[dict[str, str]], name: str) -> Path:
-        ...
-
-EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter}
-```
+<szkielet w języku projektu: pełne sygnatury z typami, docstring z przykładem wejście → wyjście>
 
 ## Kroki
-1. Dopisz `import csv` do importów.
-2. Pod `JsonExporter` dodaj klasę `CsvExporter` z `extension = "csv"`.
-3. W `export`: `path = self.target_path(name)`, otwórz `path` w trybie `"w"` z `encoding="utf-8", newline=""`.
-4. Gdy `records` jest pusta, zostaw plik pusty i zwróć `path`.
-5. W przeciwnym razie: `csv.DictWriter(f, fieldnames=list(records[0]), lineterminator="\n")`, potem `writeheader()` i `writerows(records)`.
-6. Zwróć `path`.
-7. Dopisz `"csv": CsvExporter` do `EXPORTERS`.
+1. <krok>
 
 ## Uwaga
-- **Moduł csv.** Na Windowsie puste linie między wierszami albo `\r\n` zamiast `\n` → plik otwarty bez `newline=""` i domyślny `lineterminator` → `open(..., newline="")` i `csv.writer(f, lineterminator="\n")`.
-- **Puste wejście.** `IndexError` dla pustej listy → kod zakłada co najmniej jeden element → obsłuż pusty przypadek na początku funkcji, zgodnie z docstringiem.
+- <wpis z pliku pułapek, skopiowany w całości> | brak
 
 ## Gotowe, gdy
-- `uv run python -c "import tempfile; from pathlib import Path; from app.exporters import EXPORTERS; p = EXPORTERS['csv'](Path(tempfile.mkdtemp())).export([{'a': '1', 'b': '2'}], 'x'); print(repr(p.read_text(encoding='utf-8')))"` wypisuje `'a,b\n1,2\n'`.
+- `<komenda>` wypisuje `<dokładny wynik>`.
 
 ## Propozycja testów (dla testera)
-- przykład z docstringu: treść pliku i zwrócona ścieżka `out_dir/x.csv`
-- pusta lista daje pusty plik
-- `EXPORTERS["csv"] is CsvExporter`, a `EXPORTERS["json"]` bez zmian
-- wartość `"Zażółć"` zapisuje się i odczytuje w UTF-8 bez zmian
+- <przypadek: wejście → oczekiwany wynik>
 ````
+
+**Ma być.** Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). Prompt trudny: ustalasz granice, czyli publiczne sygnatury, niezmienniki i to, co ma przejść. Środek oznaczasz jako „Do zaprojektowania przez wykonawcę: …”. Wykonawca opisuje swój projekt w raporcie, a Ty bierzesz go do promptów następnych fal.
+
+**Kroki.** Łatwe: każdy krok mechaniczny, w kolejności, z nazwami ze szkieletu. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności.
+
+**Gotowe, gdy.** Jedna linia, komenda z profilu. Działa w kilka sekund, bez GPU, bez sieci i bez zapisu poza katalogiem tymczasowym. W kodzie wpisanym w komendę tylko ASCII i cudzysłowy pojedyncze. Nigdy nie wymaga testów, bo wykonawca kodu ich nie pisze.
 
 ## Szablon: plan.md
 
@@ -180,12 +131,10 @@ EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter
 ## Fale
 | Fala | Prompt | Trudność | Pliki |
 | --- | --- | --- | --- |
-| 1 | 01-eksporter-bazowy | łatwe | src/app/exporters.py |
-| 1 | 02-konfiguracja | łatwe | src/app/config.py |
-| 2 | 03-eksport-csv | łatwe | src/app/exporters.py |
+| <F> | <PP-nazwa> | łatwe / średnie / trudne | <ścieżki> |
 
 ## Kontrakty
-- utworzone/zmienione: Docs/Kontrakty/exporters.md
+- utworzone/zmienione: Docs/Kontrakty/<modul>.md
 
 ## Otwarte pytania
 - <decyzja dla użytkownika> albo "brak"
@@ -197,7 +146,7 @@ Plik `Docs/Kontrakty/<modul>.md`, sekcje:
 
 - **Odpowiedzialność**
 - **Publiczne API:** sygnatury z typami, klasy z dziedziczeniem.
-- **Struktury danych:** kształty, typy i formaty (np. tensor `idx: LongTensor[B, T]`, rekord `dict[str, str]`).
+- **Struktury danych:** dla każdej struktury nazwa, typ i kształt albo format.
 - **Pliki:** formaty na dysku.
 - **Niezmienniki:** co tester ma sprawdzić.
 - **Zmiany:** data i opis.

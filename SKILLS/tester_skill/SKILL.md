@@ -62,36 +62,28 @@ Dla każdego promptu kodu z fali F:
 
 ### Szablon specyfikacji testów
 
-Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczego nie wymyśla. Sekcja „Przygotowanie” mówi, jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu.
+Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczego nie wymyśla. Sekcja „Przygotowanie” mówi, jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu. Wypełnione przykłady specyfikacji, poprawki i weryfikacji są w `SKILLS/tester_skill/przyklad.md`.
 
 ```markdown
-# 02-eksport-csv (testy)
+# <PP-nazwa> (testy)
 
-- **Trudność:** łatwe
-- **Model:** sonnet
-- **Plik testów (tylko ten wolno zmieniać):** tests/test_exporters_02_eksport_csv.py
-- **Wspólne fixture'y:** nie zmieniaj
-- **Prompt kodu:** Docs/Prompts/05-eksport/kod/02-eksport-csv.md
-- **Kontrakt:** Docs/Kontrakty/exporters.md
-- **Ocena propozycji plannera:** uzupełnione: dodano test, że JsonExporter został w rejestrze
+- **Trudność:** łatwe | średnie | trudne
+- **Model:** sonnet | opus
+- **Plik testów (tylko ten wolno zmieniać):** <ścieżka według profilu>
+- **Wspólne fixture'y:** nie zmieniaj | zmieniasz: <co dodać>
+- **Prompt kodu:** Docs/Prompts/NN-zadanie/kod/<PP-nazwa>.md
+- **Kontrakt:** Docs/Kontrakty/<modul>.md
+- **Ocena propozycji plannera:** wystarcza | uzupełnione: <co dodano>
 
 ## Przygotowanie
-- Import: `from app.exporters import EXPORTERS, CsvExporter, JsonExporter`
-- Obiekt: `CsvExporter(tmp_path)`, gdzie `tmp_path` to fixture pytest.
-- Dostępne fixture'y: tylko wbudowane w pytest.
+- Import: <dokładne linie importów>
+- Obiekty: <jak zbudować każdy potrzebny obiekt: konstruktor z argumentami>
+- Dostępne fixture'y: <nazwa: co daje> | tylko wbudowane
 
 ## Testy
-### test_csv_export_example
-- Wejście: `CsvExporter(tmp_path).export([{"a": "1", "b": "2"}], "x")`
-- Oczekiwane: zwraca `tmp_path / "x.csv"`, a `read_text(encoding="utf-8") == "a,b\n1,2\n"`
-
-### test_csv_export_empty
-- Wejście: `CsvExporter(tmp_path).export([], "x")`
-- Oczekiwane: `read_text(encoding="utf-8") == ""`
-
-### test_csv_registered
-- Wejście: `EXPORTERS`
-- Oczekiwane: `EXPORTERS["csv"] is CsvExporter` i `EXPORTERS["json"] is JsonExporter`
+### <nazwa_testu>
+- Wejście: <dokładne wywołanie>
+- Oczekiwane: <dokładny wynik, wyjątek albo warunek>
 ```
 
 ## Tryb WERYFIKACJA
@@ -117,46 +109,45 @@ Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczeg
 
 Ten sam układ co prompt kodu (z „Stanem obecnym” opisującym kod po nieudanej rundzie), plus sekcja „Błąd” na początku:
 
-````markdown
-# 02-eksport-csv, poprawka 1
+```markdown
+# <PP-nazwa>, poprawka <K>
 
-- **Trudność:** łatwe
-- **Pliki (tylko te wolno zmieniać):** src/app/exporters.py
-- **Prompt pierwotny:** Docs/Prompts/05-eksport/kod/02-eksport-csv.md
+- **Trudność:** łatwe | średnie | trudne
+- **Pliki (tylko te wolno zmieniać):** <ścieżki>
+- **Prompt pierwotny:** Docs/Prompts/NN-zadanie/kod/<PP-nazwa>.md
 
 ## Błąd
-- Test: `tests/test_exporters_02_eksport_csv.py::test_csv_export_empty`
-- Wynik: `IndexError: list index out of range` dla `export([], "x")`
-- Oczekiwane według docstringu: pusty plik
-- Hipoteza (pułapka „Puste wejście”): `records[0]` jest czytane przed sprawdzeniem pustej listy.
+- Test: <plik::nazwa_testu> | <błąd sprawdzenia statycznego: plik, linia, kod błędu>
+- Wynik: <dokładny komunikat i wejście, przy którym wystąpił>
+- Oczekiwane według docstringu albo kontraktu: <co powinno być>
+- Hipoteza (pułapka „<nazwa>” albo własna): <przyczyna>
 
 ## Stan obecny
-- **Struktura:** `CsvExporter.export` tworzy `DictWriter` z `fieldnames=list(records[0])` w pierwszej linii po `open`.
-- **Nie ruszać:** reszta pliku.
+- **Struktura:** <zarys fragmentu z błędem, taki jak jest teraz w kodzie>
+- **Nie ruszać:** <co zostaje bez zmian>
 
 ## Gotowe, gdy
-- `uv run pytest tests/test_exporters_02_eksport_csv.py` przechodzi.
-````
+- `<komenda testów z profilu> <plik testów>` przechodzi.
+```
 
 Wykonawca poprawki może uruchamiać testy, ale nie może ich zmieniać.
 
 ### Szablon weryfikacji
 
 ```markdown
-# Weryfikacja: zadanie 05, fala 2
+# Weryfikacja: zadanie <NN>, fala <F>
 
-## Runda 1
-- **Testy:** `uv run pytest` → 14 passed, 2 failed
+## Runda <R>
+- **Testy:** `<komenda>` → <liczba passed, failed>
 - **Sprawdzenie statyczne:** przechodzi | <liczba błędów, pliki>
 
-| Test | Przyczyna | Błąd w | Działanie |
+| Test albo błąd statyczny | Przyczyna | Błąd w | Działanie |
 | --- | --- | --- | --- |
-| test_csv_export_empty | IndexError dla [] | kodzie | poprawki/02-eksport-csv-1.md |
-| test_csv_registered | zły import | teście | poprawione, przechodzi |
+| <nazwa> | <przyczyna> | kodzie / teście / specyfikacji / kontrakcie | <plik poprawki albo „poprawione, przechodzi”> |
 
-- **Nowe pułapki:** brak | pulapki/python.md: „Puste wejście”
-- **Problemy z kontraktem:** brak
-- **Werdykt:** niegotowe
+- **Nowe pułapki:** brak | <plik pułapek>: „<nazwa wpisu>”
+- **Problemy z kontraktem:** brak | <opis>
+- **Werdykt:** gotowe | niegotowe
 ```
 
 Odpowiedź dla orkiestratora: werdykt, ścieżki nowych plików w `poprawki/`, dopisane pułapki albo „brak”, problemy z kontraktem albo „brak”.

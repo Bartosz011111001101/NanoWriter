@@ -45,19 +45,19 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
 
 ## Raport
 
-Ścieżka: `Docs/Postep/NN-zadanie/kod/<nazwa pliku promptu>`, np. prompt `kod/02-eksport-csv.md` → `Postep/NN-zadanie/kod/02-eksport-csv.md`, poprawka `poprawki/02-eksport-csv-1.md` → `Postep/NN-zadanie/kod/02-eksport-csv-1.md`.
+Ścieżka: `Docs/Postep/NN-zadanie/kod/<nazwa pliku promptu>`. Prompt `kod/PP-nazwa.md` → `Postep/NN-zadanie/kod/PP-nazwa.md`, poprawka `poprawki/PP-nazwa-K.md` → `Postep/NN-zadanie/kod/PP-nazwa-K.md`.
 
 ```markdown
-# 02-eksport-csv
+# <PP-nazwa>[-K]
 
 - **Wynik:** zrobione | zablokowane
-- **Zmienione pliki:** src/app/exporters.py
-- **Sprawdzenie:** `<komenda z "Gotowe, gdy">` → `'a,b\n1,2\n'`
+- **Zmienione pliki:** <ścieżki>
+- **Sprawdzenie:** `<komenda z "Gotowe, gdy">` → `<faktyczny wynik>`
 - **Sprawdzenie statyczne:** przechodzi | <błędy w cudzych plikach>
 - **Funkcje pomocnicze:** brak | <nazwa> w <plik>: <co robi>
 - **Odstępstwa od szkieletu:** brak | <co i dlaczego>
 - **Projekt:** nie dotyczy | <tylko prompt trudny: klasy, funkcje pomocnicze, przepływ danych>
-- **Uwagi dla następnych fal:** brak | <np. export przyjmuje też pustą listę>
+- **Uwagi dla następnych fal:** brak | <co następne fale powinny wiedzieć o tym kodzie>
 ```
 
 Odpowiedź dla zlecającego: ścieżka raportu i linia „Wynik”.
