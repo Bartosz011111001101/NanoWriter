@@ -58,11 +58,12 @@ Dla każdego promptu kodu z fali F:
 - Typ zwracanej wartości, a także kształt i format struktur danych z kontraktu.
 - Wyjątki, jeśli kontrakt je przewiduje.
 - Klasy: podklasa działa tam, gdzie kod używa klasy bazowej, a rejestry i fabryki zwracają właściwą klasę.
+- Każdy przypadek z „Kroków” promptu kodu (wejście albo warunek → efekt) ma test.
 - Pozycje z katalogu testów projektu, które dotyczą tego modułu.
 
 ### Szablon specyfikacji testów
 
-Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczego nie wymyśla. Sekcja „Przygotowanie” mówi, jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu. Wypełnione przykłady specyfikacji, poprawki i weryfikacji są w `SKILLS/tester_skill/przyklad.md`.
+**Ty projektujesz test, wykonawca go implementuje.** Projekt to przypadek (co sprawdzasz), dokładne dane wejściowe i dokładny oczekiwany wynik. Implementacja, czyli asercje, fixture'y, parametryzacja i sposób odczytu wyniku, należy do wykonawcy. W specyfikacji nie piszesz kodu testu. Każdy test zapisujesz jako „dane → oczekiwany wynik”, używając tylko nazw ze szkieletu promptu kodu. Sekcja „Przygotowanie” mówi, skąd wziąć importowane nazwy i jak zbudować obiekty, żeby wykonawca nie musiał czytać kodu. Wypełnione przykłady specyfikacji, poprawki i weryfikacji są w `SKILLS/tester_skill/przyklad.md`.
 
 ```markdown
 # <PP-nazwa> (testy)
@@ -77,13 +78,13 @@ Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczeg
 
 ## Przygotowanie
 - Import: <dokładne linie importów>
-- Obiekty: <jak zbudować każdy potrzebny obiekt: konstruktor z argumentami>
-- Dostępne fixture'y: <nazwa: co daje> | tylko wbudowane
+- Obiekty: <jaki obiekt, z jakimi argumentami konstruktora>
+- Zasoby: <katalog tymczasowy, dane testowe, wspólne fixture'y: nazwa i co daje> | brak
 
 ## Testy
 ### <nazwa_testu>
-- Wejście: <dokładne wywołanie>
-- Oczekiwane: <dokładny wynik, wyjątek albo warunek>
+- Przypadek: <co sprawdza, jedno zdanie>
+- <dane wejściowe> → <dokładny oczekiwany wynik, wyjątek albo warunek>
 ```
 
 ## Tryb WERYFIKACJA

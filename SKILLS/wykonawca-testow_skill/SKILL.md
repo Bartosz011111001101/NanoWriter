@@ -11,10 +11,10 @@ Dostajesz ścieżkę do jednej specyfikacji testów. Piszesz dokładnie te testy
 
 1. Przeczytaj `SKILLS/projekt/profil.md` (komendy) i `SKILLS/projekt/konwencje.md` (sekcja „Testy”).
 2. Przeczytaj specyfikację (pełna ścieżka od zlecającego). `Docs/` jest w `.gitignore`, więc czytaj po pełnej ścieżce. Prompt kodu z nagłówka czytaj tylko wtedy, gdy „Przygotowanie” czegoś nie rozstrzyga.
-3. Napisz plik testów z nagłówka specyfikacji:
-   - importy i budowa obiektów dokładnie jak w „Przygotowaniu”;
-   - nazwy testów dokładnie takie jak w specyfikacji;
-   - wejścia i oczekiwane wyniki dokładnie takie jak w specyfikacji.
+3. Napisz plik testów z nagłówka specyfikacji. Kod testów piszesz sam: specyfikacja mówi, co sprawdzić („dane → oczekiwany wynik”), a asercje, fixture'y i parametryzację dobierasz Ty według konwencji projektu. Nie zmieniasz przy tym:
+   - importów i obiektów z „Przygotowania”;
+   - nazw testów;
+   - danych wejściowych i oczekiwanych wyników, co do znaku.
 4. Sprawdź składnię, a potem uruchom „Sprawdzenie statyczne jednego pliku” na pliku testów. Obie komendy są w profilu. Popraw zgłoszone błędy w swoim pliku.
 5. Uruchom plik testów komendą z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc błąd importu albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
 6. Zapisz raport (szablon niżej).

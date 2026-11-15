@@ -17,21 +17,21 @@ Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład
 
 ## Przygotowanie
 - Import: `from app.exporters import EXPORTERS, CsvExporter, JsonExporter`
-- Obiekt: `CsvExporter(tmp_path)`, gdzie `tmp_path` to fixture pytest.
-- Dostępne fixture'y: tylko wbudowane w pytest.
+- Obiekty: `CsvExporter` z katalogiem tymczasowym jako `out_dir`.
+- Zasoby: katalog tymczasowy.
 
 ## Testy
 ### test_csv_export_example
-- Wejście: `CsvExporter(tmp_path).export([{"a": "1", "b": "2"}], "x")`
-- Oczekiwane: zwraca `tmp_path / "x.csv"`, a `read_text(encoding="utf-8") == "a,b\n1,2\n"`
+- Przypadek: przykład z docstringu.
+- `export([{"a": "1", "b": "2"}], "x")` → zwraca `out_dir / "x.csv"`, plik w UTF-8 ma treść dokładnie `"a,b\n1,2\n"`
 
 ### test_csv_export_empty
-- Wejście: `CsvExporter(tmp_path).export([], "x")`
-- Oczekiwane: `read_text(encoding="utf-8") == ""`
+- Przypadek: pusta lista rekordów.
+- `export([], "x")` → plik `out_dir / "x.csv"` istnieje i jest pusty
 
 ### test_csv_registered
-- Wejście: `EXPORTERS`
-- Oczekiwane: `EXPORTERS["csv"] is CsvExporter` i `EXPORTERS["json"] is JsonExporter`
+- Przypadek: rejestr eksporterów.
+- `EXPORTERS["csv"]` → `CsvExporter`, `EXPORTERS["json"]` → `JsonExporter` (bez zmian)
 ```
 
 ## Poprawka kodu
