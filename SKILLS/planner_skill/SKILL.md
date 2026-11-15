@@ -1,13 +1,25 @@
 ---
 name: planner_skill
-description: Używaj, gdy etap lub funkcję NanoWriter trzeba rozpisać na zadania, oszacować rozmiar modelu, danych albo pamięci GPU, albo gdy trzeba napisać lub zmienić kontrakt modułu.
+description: Używaj, gdy zadanie NanoWriter trzeba rozpisać na fale i prompty ze szkieletami funkcji dla wykonawców (Haiku, Sonnet, Opus), ocenić trudność promptu, oszacować rozmiar modelu, danych albo pamięci GPU, albo napisać lub zmienić kontrakt modułu.
 ---
 
 # Planowanie w NanoWriter
 
+Wykonawcami są głównie Haiku i Sonnet. Prompt ma być tak kompletny, żeby wykonawca niczego nie wymyślał: nazwy funkcji, argumenty, typy i zwracane wartości daje szkielet.
+
+## Co tworzysz
+
+```
+Docs/Plan/NN-zadanie/plan.md
+Docs/Prompts/NN-zadanie/kod/PP-nazwa.md      jeden plik na kawałek pracy
+Docs/Kontrakty/<modul>.md                    nowe albo zmienione kontrakty
+```
+
+`Docs/` jest w `.gitignore`. Listuj przez `ls`, czytaj po pełnej ścieżce. Promptów testów nie piszesz, robi to tester. Ty w każdym prompcie kodu zostawiasz sekcję „Propozycja testów”.
+
 ## Mapa modułów
 
-Każdy moduł to jeden plik `src/nanowriter/<modul>.py` i jeden kontrakt `Docs/Kontrakty/<modul>.md`.
+Każdy moduł to plik `src/nanowriter/<modul>.py` i kontrakt `Docs/Kontrakty/<modul>.md`.
 
 | Moduł | Odpowiada za | Etap |
 | --- | --- | --- |
@@ -19,88 +31,114 @@ Każdy moduł to jeden plik `src/nanowriter/<modul>.py` i jeden kontrakt `Docs/K
 | `sample` | generowanie: temperatura, top-k, top-p, KV cache | 1, 6 |
 | `evaluate` | strata walidacyjna, perplexity, stały zestaw promptów | 7 |
 
-Skrypty uruchamiające moduły trafiają do `scripts/`. Nie zawierają logiki, tylko ją wywołują.
+Skrypty w `scripts/` tylko wywołują moduły, bez własnej logiki.
 
-## Jak ciąć etap na zadania
+## Cięcie na prompty i fale
 
-- Najpierw kontrakt, potem najprostsza działająca wersja, potem ulepszenia. Przykład: ręczna uwaga przed `scaled_dot_product_attention`, pozycje uczone przed RoPE.
-- Jedno zadanie to jedna zmiana zachowania, którą da się sprawdzić jednym albo kilkoma testami. To mniej więcej godzina pracy.
-- Każde zadanie wskazuje: pliki do zmiany, kontrakt, którego dotyczy, i test potwierdzający wykonanie.
-- Optymalizacje (`torch.compile`, bf16, KV cache) to osobne zadania, zawsze po wersji, która już działa i ma testy.
-- Ostatnie zadanie etapu to test bramki z `SKILLS/orchestrator_skill/SKILL.md`.
+- Jeden prompt to jedna do trzech funkcji albo jedna mała klasa.
+- **Fala** to prompty, które mogą iść równolegle. Prompty w jednej fali:
+  - nie zmieniają tych samych plików;
+  - nie zależą od siebie (żaden nie używa funkcji, którą pisze inny w tej samej fali).
+- Prompt korzystający z funkcji z wcześniejszego promptu idzie do późniejszej fali.
+- Gdy dwa niezależne prompty muszą zmienić ten sam plik, daj je do różnych fal.
+- Najpierw najprostsza działająca wersja, optymalizacje (`torch.compile`, bf16, KV cache) w późniejszych falach.
+- Ostatnia fala zadania zawiera test bramki z `SKILLS/orchestrator_skill/SKILL.md`, jeśli zadanie zamyka etap.
 
-## Szablon planu etapu
+## Trudność
 
-Plik `Docs/Plan/etap-N.md`:
+| Trudność | Model | Kiedy | Przykłady |
+| --- | --- | --- | --- |
+| łatwe | Haiku | Szkielet kompletny, ciało wynika wprost z kroków, bez decyzji projektowych. | zliczanie par BPE, podział train/val, zapis tablicy do `.bin` |
+| średnie | Sonnet | Kilka współpracujących funkcji albo klasa, operacje na kształtach tensorów, drobne decyzje wewnątrz szkieletu. | multi-head attention, pętla treningu z ewaluacją, top-k/top-p |
+| trudne | Opus | Łatwo o cichy błąd w poprawności albo wydajności. | KV cache zgodny z wersją bez cache, wznowienie treningu ze stanem RNG, szybki trening BPE na dużym korpusie |
+
+Wahasz się między łatwe a średnie? Podziel prompt na mniejsze, zamiast podnosić trudność. „Trudne” to wyjątek.
+
+## Szablon: plan.md
 
 ```markdown
-# Etap N: <nazwa>
+# Zadanie NN: <nazwa>
 
 ## Cel
-<jedno zdanie> Gotowe, gdy: <coś do uruchomienia i zobaczenia>.
+<jedno zdanie>. Gotowe, gdy: <coś do uruchomienia i zobaczenia>.
 
-## Zadania
-### N.1 <nazwa>
-- Pliki: src/nanowriter/<modul>.py, tests/test_<modul>.py
-- Kontrakt: Docs/Kontrakty/<modul>.md (sekcja ...)
-- Test: <co dokładnie sprawdza>
+## Fale
+| Fala | Prompt | Trudność | Pliki |
+| --- | --- | --- | --- |
+| 1 | 01-pary | łatwe | src/nanowriter/tokenizer.py |
+| 1 | 02-podzial | łatwe | src/nanowriter/data.py |
+| 2 | 03-merge | średnie | src/nanowriter/tokenizer.py |
 
-## Kolejność
-N.1 → N.2 → N.3 (N.4 zależy od N.2)
+## Kontrakty
+- utworzone/zmienione: Docs/Kontrakty/tokenizer.md
 
 ## Otwarte pytania
 - <decyzja dla użytkownika> albo "brak"
 ```
 
-## Szablon kontraktu
+## Szablon: prompt kodu
 
-Plik `Docs/Kontrakty/<modul>.md`, sekcje w tej kolejności: Odpowiedzialność, Publiczne API, Tensory, Pliki, Niezmienniki, Zmiany. Przykład:
+Sekcje w tej kolejności. Każda funkcja w szkielecie ma pełną sygnaturę z typami i docstring z przykładem wejście → wyjście.
 
-```markdown
-# Kontrakt: tokenizer
+````markdown
+# 01-pary
 
-## Odpowiedzialność
-Zamienia tekst na listę id tokenów i z powrotem, bez strat.
+- **Trudność:** łatwe
+- **Fala:** 1
+- **Zależy od:** brak
+- **Pliki (tylko te wolno zmieniać):** src/nanowriter/tokenizer.py
+- **Kontrakt:** Docs/Kontrakty/tokenizer.md
 
-## Publiczne API
-- `class Tokenizer`
-  - `train(text: str, vocab_size: int) -> None`
-  - `encode(text: str) -> list[int]`
-  - `decode(ids: list[int]) -> str`
-  - `save(path: Path) -> None`, `@classmethod load(path: Path) -> Tokenizer`
-  - `vocab_size: int`
+## Cel
+Zliczanie sąsiednich par id, potrzebne do wyboru następnego merge'a BPE.
 
-## Tensory
-Brak (zwraca listy int, tensory tworzy `dataset`).
+## Szkielet
+```python
+def get_pair_counts(ids: list[int]) -> dict[tuple[int, int], int]:
+    """Zlicza wystąpienia sąsiednich par id.
 
-## Pliki
-- `tokenizer.json`: UTF-8 JSON, `{"merges": [[a, b], ...], "vocab_size": int}`.
-
-## Niezmienniki
-- `decode(encode(x)) == x` dla każdego `str`, także pustego, z polskimi znakami i emoji.
-- Każde id spełnia `0 <= id < vocab_size`.
-- Po `save` i `load` `encode` daje identyczny wynik.
-
-## Zmiany
-- RRRR-MM-DD: pierwsza wersja.
+    Przykład: [1, 2, 1, 2] -> {(1, 2): 2, (2, 1): 1}
+    Pusta lista albo jeden element -> {}
+    """
 ```
 
-Zmiana istniejącego kontraktu to wpis w sekcji „Zmiany” z datą. W odpowiedzi dla orkiestratora wymień też testy, które trzeba zaktualizować.
+## Kroki
+1. Utwórz pusty słownik.
+2. Przejdź po parach `zip(ids, ids[1:])` i zwiększaj licznik każdej pary.
+3. Zwróć słownik.
+
+## Gotowe, gdy
+- `uv run python -c "from nanowriter.tokenizer import get_pair_counts; print(get_pair_counts([1,2,1,2]))"` wypisuje `{(1, 2): 2, (2, 1): 1}`.
+
+## Propozycja testów (dla testera)
+- przykład z docstringu
+- pusta lista i jeden element dają `{}`
+- para powtórzona trzy razy pod rząd: `[5, 5, 5, 5]` -> `{(5, 5): 3}`
+````
+
+## Szablon: kontrakt
+
+Plik `Docs/Kontrakty/<modul>.md`, sekcje: Odpowiedzialność, Publiczne API (sygnatury z typami), Tensory (kształt i dtype, np. `idx: LongTensor[B, T]`), Pliki (formaty), Niezmienniki (co tester ma sprawdzić), Zmiany (data + opis). Szkielety w promptach muszą być zgodne z kontraktem. Zmiana kontraktu to wpis w „Zmiany”.
 
 ## Liczby do planowania
 
-- **Parametry transformera** ≈ `12 · n_layer · d_model²` (uwaga `4d²` + MLP `8d²` na warstwę) plus embedding `vocab_size · d_model` (raz, jeśli wagi wyjścia są współdzielone).
-  - Przykład: 6 warstw, `d_model=384`, vocab 8192 → ok. 10,6M + 3,1M ≈ 14M.
-- **Dane (Chinchilla):** ok. 20 tokenów na parametr. Model 14M parametrów potrzebuje ~280M tokenów. Przy mniejszej ilości danych zaplanuj mniejszy model albo kilka epok i zwróć uwagę na przeuczenie.
-- **Pamięć GPU na wagi i optymalizator (AdamW, fp32):** ok. 16 bajtów na parametr. 14M parametrów to ~0,22 GB. Resztę pamięci zajmują aktywacje, które rosną z `batch · kontekst · d_model · n_layer`. Gdy pamięci brakuje, zmniejsz batch i włącz akumulację gradientów.
-- **Konfiguracja startowa (etap 4):** 4 warstwy, 4 głowice, `d_model=256`, kontekst 256.
+- **Parametry transformera** ≈ `12 · n_layer · d_model²` plus embedding `vocab_size · d_model` (raz, gdy wagi wyjścia są współdzielone). Przykład: 6 warstw, `d_model=384`, vocab 8192 → ≈ 14M.
+- **Dane (Chinchilla):** ok. 20 tokenów na parametr, czyli 14M parametrów → ~280M tokenów.
+- **Pamięć GPU na wagi i AdamW (fp32):** ok. 16 bajtów na parametr. Reszta to aktywacje, które rosną z `batch · kontekst · d_model · n_layer`. Gdy brakuje pamięci: mniejszy batch i akumulacja gradientów.
+- **Start etapu 4:** 4 warstwy, 4 głowice, `d_model=256`, kontekst 256.
+
+## Odpowiedź dla orkiestratora
+
+1. Ścieżka planu i lista fal (numer fali i nazwy promptów).
+2. Utworzone i zmienione kontrakty.
+3. Otwarte pytania albo „brak”.
 
 ## Częste błędy
 
 | Błąd | Poprawka |
 | --- | --- |
-| Zadanie „napisz model” | Podziel na: embedding, uwaga, blok, cały model, test przeuczenia. |
-| Kontrakt bez kształtów tensorów | Każdy tensor ma kształt i dtype, np. `idx: LongTensor[B, T]`. |
-| Zadanie bez testu | Dopisz, co test sprawdza. Jeśli nie da się tego sprawdzić, zadanie jest źle wycięte. |
-| Optymalizacja przed działającą wersją | Przenieś ją na koniec etapu. |
+| Szkielet bez typów albo bez przykładu w docstringu | Haiku zacznie zgadywać. Dopisz typy i przykład wejście → wyjście. |
+| Dwa prompty jednej fali zmieniają ten sam plik | Przenieś jeden do następnej fali. |
+| Prompt używa funkcji z promptu tej samej fali | Przenieś go do następnej fali. |
+| „Gotowe, gdy” wymaga testów | Wykonawca kodu nie pisze testów. Daj komendę `uv run python -c ...`. |
 | Decyzja użytkownika podjęta przez plannera | Przenieś ją do „Otwarte pytania”. |

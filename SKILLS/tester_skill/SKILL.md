@@ -1,28 +1,133 @@
 ---
 name: tester_skill
-description: Używaj, gdy dla kodu NanoWriter trzeba napisać testy pytest według kontraktu, sprawdzić, czy test nie przechodzi z właściwego powodu, albo zdiagnozować typowy błąd modelu (strata nie spada, NaN, wyciek przyszłości przez maskę).
+description: Używaj, gdy w NanoWriter trzeba ocenić propozycje testów od plannera i napisać specyfikacje testów dla wykonawców (tryb SPEC), albo uruchomić testy fali, rozstrzygnąć, czy błąd jest w kodzie, czy w teście, i napisać poprawki (tryb WERYFIKACJA).
 ---
 
 # Testowanie w NanoWriter
 
-## Zasady
+Tester projektuje testy i ocenia wyniki. Testów nie pisze sam, tylko odpala do tego agentów `wykonawca-testow`. Kodu w `src/` nie zmienia nigdy.
 
-- Testy wynikają z kontraktu: każdy niezmiennik z sekcji „Niezmienniki” ma swój test.
-- Domyślnie testy idą na CPU, na malutkim modelu (np. 2 warstwy, `d_model=32`, vocab 64, kontekst 16). Cały plik testów wykonuje się w kilka sekund.
-- Seed na początku każdego testu z losowością: `torch.manual_seed(0)`.
-- Model w testach porównujących wyjścia jest w `model.eval()`, bo dropout psuje porównania.
-- Testy wymagające GPU: `@pytest.mark.skipif(not torch.cuda.is_available(), reason="brak GPU")`.
-- Wspólne fixture'y (malutka konfiguracja, model, tokenizer) leżą w `tests/conftest.py`.
+## Pliki
 
-## Właściwy powód porażki (RED)
+```
+czytasz:  Docs/Plan/NN-zadanie/plan.md
+          Docs/Prompts/NN-zadanie/kod/PP-nazwa.md     szkielet i "Propozycja testów"
+          Docs/Kontrakty/<modul>.md
+piszesz:  Docs/Prompts/NN-zadanie/testy/PP-nazwa.md   specyfikacja testów
+          Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md   poprawka kodu
+          Docs/Postep/NN-zadanie/weryfikacja-fala-F.md
+```
 
-| Właściwy powód | Niewłaściwy powód, czyli test do poprawy |
-| --- | --- |
-| Brak modułu, klasy albo funkcji, którą zadanie ma dodać | Literówka w nazwie z kontraktu |
-| Funkcja istnieje, ale zwraca zły wynik | Błąd w fixture albo w danych testowych |
-| `NotImplementedError` w zaślepce | Zły import istniejącego modułu |
+`Docs/` jest w `.gitignore`. Listuj przez `ls`, czytaj po pełnej ścieżce.
 
-## Katalog testów
+Plik testów jednego promptu: `tests/test_<modul>_<PP>_<nazwa>.py` (podkreślniki zamiast myślników, np. `tests/test_tokenizer_01_pary.py`). Każdy prompt ma własny plik, więc równolegli wykonawcy testów się nie nadpisują. Wspólne fixture'y w `tests/conftest.py` zmienia w fali tylko jeden prompt testów, oznaczony w nagłówku.
+
+## Tryb SPEC
+
+Dla każdego promptu kodu z fali F:
+
+1. Oceń „Propozycję testów” plannera według listy niżej. Brakujące testy dopisz.
+2. Zapisz specyfikację w `Docs/Prompts/NN-zadanie/testy/PP-nazwa.md` (szablon niżej).
+3. Odpal agenta `wykonawca-testow` dla każdej specyfikacji, równolegle, model według trudności (łatwe → `haiku`, średnie → `sonnet`, trudne → `opus`). Zlecenie: „Wykonaj `Docs/Prompts/NN-zadanie/testy/PP-nazwa.md`.”
+4. Odpowiedź dla orkiestratora: lista plików testów i wyniki z `Docs/Postep/NN-zadanie/testy/`.
+
+### Czy propozycja wystarcza
+
+- Każdy niezmiennik z kontraktu modułu ma test.
+- Każdy przykład z docstringu w szkielecie ma test.
+- Przypadki brzegowe: pusty wejściowy tekst lub lista, jeden element, polskie znaki i emoji, `B=1` i `T=1` dla tensorów.
+- Kształty i dtype każdego zwracanego tensora.
+- Wyjątki, jeśli kontrakt je przewiduje (`pytest.raises`).
+- Dla modułów modelu i treningu: pozycje z katalogu niżej.
+
+### Szablon specyfikacji testów
+
+Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczego nie wymyśla.
+
+```markdown
+# 01-pary (testy)
+
+- **Trudność:** łatwe
+- **Plik testów (tylko ten wolno zmieniać):** tests/test_tokenizer_01_pary.py
+- **conftest.py:** nie zmieniaj
+- **Prompt kodu:** Docs/Prompts/03-tokenizer/kod/01-pary.md
+- **Kontrakt:** Docs/Kontrakty/tokenizer.md
+- **Ocena propozycji plannera:** uzupełnione: dodano test na typ zwracanej wartości
+
+## Import
+`from nanowriter.tokenizer import get_pair_counts`
+
+## Testy
+### test_get_pair_counts_example
+- Wejście: `get_pair_counts([1, 2, 1, 2])`
+- Oczekiwane: `== {(1, 2): 2, (2, 1): 1}`
+
+### test_get_pair_counts_short_inputs
+- Wejście: `get_pair_counts([])` i `get_pair_counts([7])`
+- Oczekiwane: oba `== {}`
+
+### test_get_pair_counts_repeated
+- Wejście: `get_pair_counts([5, 5, 5, 5])`
+- Oczekiwane: `== {(5, 5): 3}`
+```
+
+## Tryb WERYFIKACJA
+
+1. Użyj `superpowers:verification-before-completion`. Uruchom pełny zestaw: `uv run pytest`.
+2. Dla każdego nieprzechodzącego testu rozstrzygnij, gdzie jest błąd:
+
+| Sytuacja | Błąd w | Działanie |
+| --- | --- | --- |
+| Test sprawdza coś innego, niż mówi specyfikacja, albo ma literówkę lub zły import | teście | Odpal `wykonawca-testow` z poprawioną specyfikacją, uruchom testy ponownie. |
+| Specyfikacja testu przeczy szkieletowi albo kontraktowi | specyfikacji | Popraw specyfikację, potem jak wyżej. |
+| Kod łamie szkielet, docstring albo kontrakt | kodzie | Napisz `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`. Kodu nie poprawiasz. |
+| Szkielet i kontrakt są ze sobą sprzeczne albo niejasne | kontrakcie | Zgłoś to orkiestratorowi. Rozstrzyga planner. |
+
+3. Zapisz `Docs/Postep/NN-zadanie/weryfikacja-fala-F.md` (szablon niżej). Kolejne rundy dopisuj w tym samym pliku jako nową sekcję.
+
+### Szablon poprawki kodu
+
+Ten sam układ co prompt kodu, plus sekcja „Błąd” na początku:
+
+````markdown
+# 01-pary, poprawka 1
+
+- **Trudność:** łatwe
+- **Pliki (tylko te wolno zmieniać):** src/nanowriter/tokenizer.py
+- **Prompt pierwotny:** Docs/Prompts/03-tokenizer/kod/01-pary.md
+
+## Błąd
+- Test: `tests/test_tokenizer_01_pary.py::test_get_pair_counts_short_inputs`
+- Wynik: `IndexError: list index out of range` dla `get_pair_counts([])`
+- Oczekiwane według docstringu: `{}`
+- Hipoteza: pętla zakłada co najmniej jeden element.
+
+## Gotowe, gdy
+- `uv run pytest tests/test_tokenizer_01_pary.py` przechodzi.
+````
+
+Wykonawca poprawki może uruchamiać testy, ale nie może ich zmieniać.
+
+### Szablon weryfikacji
+
+```markdown
+# Weryfikacja: zadanie 03, fala 1
+
+## Runda 1
+- **Komenda:** `uv run pytest` → 14 passed, 2 failed
+
+| Test | Przyczyna | Błąd w | Działanie |
+| --- | --- | --- | --- |
+| test_get_pair_counts_short_inputs | IndexError dla [] | kodzie | poprawki/01-pary-1.md |
+| test_split_ratio | zły import | teście | poprawione, przechodzi |
+
+- **Problemy z kontraktem:** brak
+- **Werdykt:** niegotowe
+```
+
+Odpowiedź dla orkiestratora: werdykt, ścieżki nowych plików w `poprawki/`, problemy z kontraktem albo „brak”.
+
+## Katalog testów dla LLM
 
 | Moduł | Test | Co sprawdza |
 | --- | --- | --- |
@@ -37,80 +142,14 @@ description: Używaj, gdy dla kodu NanoWriter trzeba napisać testy pytest wedł
 | `model` | gradienty | po `backward` każdy parametr ma niezerowy `grad` |
 | `model` | przeuczenie | na jednym batchu strata spada poniżej ~0,1 w kilkuset krokach |
 | `train` | checkpoint | po zapisie i odczycie model daje identyczne `logits` |
-| `train` | wznowienie | trening N kroków = trening N/2 kroków + wznowienie + N/2 kroków |
+| `train` | wznowienie | trening N kroków = N/2 + wznowienie + N/2 |
 | `sample` | długość | `generate` zwraca dokładnie zadaną liczbę nowych tokenów |
 | `sample` | powtarzalność | ten sam seed daje ten sam tekst |
 | `sample` | KV cache | wynik z cache i bez cache jest identyczny |
 
-## Przykład: testy modelu
-
-Nazwy (`GPTConfig`, `GPT`) dopasuj do kontraktu `Docs/Kontrakty/model.md`.
-
-```python
-# tests/conftest.py
-import pytest
-import torch
-from nanowriter.model import GPT, GPTConfig
-
-@pytest.fixture
-def tiny_config():
-    return GPTConfig(vocab_size=64, block_size=16, n_layer=2, n_head=2, d_model=32)
-
-@pytest.fixture
-def tiny_model(tiny_config):
-    torch.manual_seed(0)
-    return GPT(tiny_config).eval()
-```
-
-```python
-# tests/test_model.py
-import math
-import torch
-import torch.nn.functional as F
-
-def test_causal_mask_hides_future(tiny_model, tiny_config):
-    torch.manual_seed(0)
-    idx = torch.randint(0, tiny_config.vocab_size, (1, 16))
-    changed = idx.clone()
-    changed[0, 10] = (changed[0, 10] + 1) % tiny_config.vocab_size
-
-    with torch.no_grad():
-        a, b = tiny_model(idx), tiny_model(changed)
-
-    # Pozycje przed zmianą nie mogą "widzieć" przyszłego tokenu.
-    assert torch.allclose(a[:, :10], b[:, :10], atol=1e-5)
-    # Pozycje od zmiany wzwyż powinny się zmienić. Jeśli nie, model ignoruje wejście.
-    assert not torch.allclose(a[:, 10:], b[:, 10:])
-
-def test_initial_loss_near_uniform(tiny_model, tiny_config):
-    torch.manual_seed(0)
-    x = torch.randint(0, tiny_config.vocab_size, (4, 16))
-    y = torch.randint(0, tiny_config.vocab_size, (4, 16))
-    with torch.no_grad():
-        logits = tiny_model(x)
-    loss = F.cross_entropy(logits.view(-1, tiny_config.vocab_size), y.view(-1))
-    # Świeży model powinien zgadywać mniej więcej równomiernie.
-    assert abs(loss.item() - math.log(tiny_config.vocab_size)) < 0.1 * math.log(tiny_config.vocab_size)
-
-def test_overfits_single_batch(tiny_model, tiny_config):
-    torch.manual_seed(0)
-    tiny_model.train()
-    x = torch.randint(0, tiny_config.vocab_size, (4, 16))
-    y = torch.roll(x, shifts=-1, dims=1)
-    opt = torch.optim.AdamW(tiny_model.parameters(), lr=3e-3)
-    for _ in range(300):
-        logits = tiny_model(x)
-        loss = F.cross_entropy(logits.view(-1, tiny_config.vocab_size), y.view(-1))
-        opt.zero_grad()
-        loss.backward()
-        opt.step()
-    # Jeśli model nie potrafi zapamiętać jednego batcha, w kodzie jest błąd.
-    assert loss.item() < 0.1
-```
-
 ## Diagnoza typowych porażek
 
-Podaj ją w raporcie jako hipotezę. Kodu w `src/` nie poprawiasz.
+Wpisz ją jako „Hipoteza” w poprawce.
 
 | Objaw | Najczęstsza przyczyna |
 | --- | --- |

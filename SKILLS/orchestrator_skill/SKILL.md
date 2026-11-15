@@ -1,95 +1,90 @@
 ---
 name: orchestrator_skill
-description: Używaj w głównej sesji projektu NanoWriter przy każdej prośbie użytkownika, gdy trzeba zdecydować, kto wykonuje pracę (planner, tester, implementacja), napisać zlecenie dla agenta albo zamknąć zadanie lub etap.
+description: Używaj w głównej sesji projektu NanoWriter przy każdej prośbie użytkownika, gdy trzeba zdecydować, kogo odpalić (planner, tester, wykonawca-kodu), jakim modelem, w jakiej kolejności, albo zamknąć falę lub zadanie.
 ---
 
 # Orkiestracja pracy w NanoWriter
+
+Orkiestrator nie pisze kodu, testów ani promptów. Odpala agentów, pilnuje kolejności i commituje.
+
+## Mapa Docs/
+
+`NN-zadanie` to folder jednego zadania (np. `03-tokenizer`). `PP-nazwa` to jeden prompt (np. `01-pary`). Ten sam `PP-nazwa` w każdym folderze dotyczy tego samego kawałka pracy, więc czytasz zawsze tylko jeden plik.
+
+```
+Docs/
+  Plan/NN-zadanie/plan.md                        planner: cel, fale, trudności
+  Prompts/NN-zadanie/kod/PP-nazwa.md             planner: szkielet + kroki dla wykonawcy kodu
+  Prompts/NN-zadanie/testy/PP-nazwa.md           tester: specyfikacja testów
+  Prompts/NN-zadanie/poprawki/PP-nazwa-K.md      tester: poprawka kodu nr K
+  Postep/NN-zadanie/kod/PP-nazwa[-K].md          wykonawca-kodu: co zrobił
+  Postep/NN-zadanie/testy/PP-nazwa.md            wykonawca-testow: co zrobił
+  Postep/NN-zadanie/weryfikacja-fala-F.md        tester: wynik testów i werdykt
+  Kontrakty/<modul>.md                           planner: jeden plik na moduł, bez folderów zadań
+```
+
+`Docs/` jest w `.gitignore`, więc Grep i Glob mogą go pomijać. Listuj przez `ls`, czytaj po pełnej ścieżce.
 
 ## Co robić z prośbą
 
 | Prośba | Działanie |
 | --- | --- |
 | Pytanie, wyjaśnienie | Odpowiedz sam, bez agentów. |
-| Nowy etap z `wstępny_plan.md` albo nowa funkcja | Brakujące decyzje → zapytaj użytkownika. Potem **planner**. |
-| Zadanie z gotowego planu | Cykl zadania (niżej). |
-| Bug, test nie przechodzi | Sam: `superpowers:systematic-debugging`. Poprawkę robi implementacja, a **tester** ją potwierdza. |
-| Zmiana kontraktu, który ma już kod | Zapytaj użytkownika. Potem **planner** aktualizuje kontrakt, a **tester** testy. |
-| Drobna poprawka (literówka, komentarz, jedna linia) | Zrób sam, uruchom `uv run pytest`, commit. |
+| Nowe zadanie (etap z `Plan/00-wstepny-plan/wstępny_plan.md` albo funkcja) | Brakujące decyzje użytkownika → zapytaj. Potem cykl zadania. |
+| Bug poza trwającym zadaniem | Sam `superpowers:systematic-debugging`, potem małe zadanie dla plannera. |
+| Zmiana kontraktu, który ma już kod | Zapytaj użytkownika, potem planner. |
+| Drobna poprawka (literówka, komentarz) | Zrób sam, `uv run pytest`, commit. |
 
 ## Cykl zadania
 
-1. **tester (RED)** pisze testy do zadania. Testy muszą nie przechodzić z właściwego powodu.
-2. **Implementacja** (subagent `general-purpose`) pisze kod, aż testy przejdą.
-3. **tester (weryfikacja)** uruchamia pełny `uv run pytest`.
-4. Werdykt „gotowe”: commit na `main` i wpis do `Docs/Postep/`.
-5. Werdykt „niegotowe”: odeślij implementacji raport testera bez zmian. Po drugiej nieudanej poprawce przerwij i zrób sam `superpowers:systematic-debugging`. Jeśli przyczyna leży w kontrakcie, zapytaj użytkownika.
+1. **planner**: „Zaplanuj zadanie `NN-zadanie`. Cel: … Decyzje użytkownika: …”. Wraca lista fal.
+2. **Dla każdej fali F, po kolei:**
+   1. Przed falą F > 1 przeczytaj `Postep/NN-zadanie/kod/*` z poprzednich fal. Jeśli ktoś zgłosił odstępstwo od szkieletu albo uwagi dla następnych fal, najpierw odpal plannera z prośbą o aktualizację promptów fali F.
+   2. **Równolegle, w jednej wiadomości:**
+      - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” Tester pisze specyfikacje i sam odpala swoich wykonawców testów.
+      - **wykonawca-kodu**, po jednym na każdy prompt fali: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej.
+   3. Gdy wszyscy wrócą, **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.”
+   4. Werdykt **gotowe**: commit (niżej), następna fala.
+   5. Werdykt **niegotowe**: dla każdego nowego pliku w `Prompts/NN-zadanie/poprawki/` odpal wykonawcę-kodu, równolegle, jeśli pliki się nie pokrywają. Potem znowu punkt 3 z R+1.
+3. Po ostatniej fali: `superpowers:verification-before-completion` i krótkie podsumowanie dla użytkownika.
 
-Zadania wykonuj po kolei, nie równolegle, bo moduły LLM zależą od siebie (dane → tokenizer → model → trening).
+Wykonawca kodu nigdy nie dostaje promptu testów ani nie zmienia `tests/`. Testy powstają wyłącznie u testera.
 
-## Szablony zleceń
+## Trudność → model
 
-Każde zlecenie to cztery punkty, w tej kolejności.
+| Trudność w nagłówku promptu | Model |
+| --- | --- |
+| łatwe | `haiku` |
+| średnie | `sonnet` |
+| trudne | `opus` |
 
-**Dla plannera:**
-1. Cel: rozpisz etap N (nazwa) na zadania i kontrakty.
-2. Czytaj: `Docs/Plan/wstępny_plan.md`, `Docs/Kontrakty/*`, ostatni wpis w `Docs/Postep/`.
-3. Decyzje użytkownika: (lista, np. „język: polski, dane: Wolne Lektury”).
-4. Gotowe, gdy: plan w `Docs/Plan/etap-N.md` i kontrakty dla nowych modułów.
-
-**Dla testera (RED):**
-1. Cel: testy do zadania „X” z `Docs/Plan/etap-N.md`.
-2. Czytaj: plan (sekcja zadania) i `Docs/Kontrakty/<modul>.md`.
-3. Możesz zmieniać: `tests/test_<modul>.py`, `tests/conftest.py`.
-4. Gotowe, gdy: testy istnieją i nie przechodzą z właściwego powodu.
-
-**Dla implementacji:**
-1. Cel: zaimplementuj zadanie „X”, aż przejdą testy w `tests/test_<modul>.py`.
-2. Czytaj: plan (sekcja zadania), `Docs/Kontrakty/<modul>.md`, testy.
-3. Możesz zmieniać: `src/nanowriter/<modul>.py` (i tylko pliki wskazane w planie). Testów nie zmieniasz.
-4. Gotowe, gdy: `uv run pytest tests/test_<modul>.py` przechodzi. Uruchamiaj przez `uv run`.
-
-**Dla testera (weryfikacja):**
-1. Cel: potwierdź zadanie „X”.
-2. Czytaj: plan i kontrakt modułu.
-3. Niczego nie zmieniasz.
-4. Gotowe, gdy: raport z wynikiem pełnego `uv run pytest` i werdyktem.
+**Eskalacja poprawek:** każda kolejna runda poprawki tego samego `PP-nazwa` podnosi model o jeden poziom (haiku → sonnet → opus). Gdy nie wyjdzie na Opusie, zatrzymaj zadanie i zapytaj użytkownika.
 
 ## Kiedy pytać użytkownika
 
 - Decyzje o produkcie: język, rodzaj tekstu, źródło danych, rozmiar modelu.
 - Zmiana kontraktu, który ma już kod i testy.
-- Przed treningiem dłuższym niż ~15 minut albo pobieraniem dużych danych (powyżej ~1 GB), bo użytkownik korzysta wtedy z komputera.
-- Po dwóch nieudanych poprawkach tego samego zadania.
+- Przed treningiem dłuższym niż ~15 minut albo pobieraniem więcej niż ~1 GB danych, bo użytkownik korzysta wtedy z komputera.
+- Gdy poprawka nie wychodzi nawet na Opusie.
+- Gdy planner zwróci „Otwarte pytania” inne niż „brak”.
 
 ## Bramki etapów
 
-Etap jest zamknięty dopiero, gdy przechodzi jego test bramki:
+Zadanie odpowiadające etapowi jest zamknięte dopiero, gdy przechodzi test bramki. Planner umieszcza go w ostatniej fali.
 
 | Etap | Test bramki |
 | --- | --- |
 | 1 Bigram | Strata treningowa spada, `generate` zwraca tekst o zadanej długości. |
-| 2 Dane | Podział train/val istnieje, zbiory się nie pokrywają, rozmiary zapisane w `Docs/Postep/`. |
+| 2 Dane | Podział train/val istnieje, zbiory się nie pokrywają. |
 | 3 Tokenizer | `decode(encode(x)) == x` dla polskich znaków, emoji i pustego tekstu, a pliki `.bin` mają dtype z kontraktu. |
 | 4 Transformer | Kształty się zgadzają, test maski przyczynowej przechodzi, model przeucza się na jednym batchu. |
-| 5 Trening | Wznowienie z checkpointu daje tę samą stratę co trening bez przerwy, a strata walidacyjna jest logowana. |
+| 5 Trening | Wznowienie z checkpointu daje tę samą stratę co trening bez przerwy. |
 | 6 Generowanie | Z KV cache i bez niego wynik jest identyczny przy tym samym seedzie. |
 
-Dla etapów 7–10 bramkę ustala planner w planie etapu.
+Dla etapów 7–10 bramkę ustala planner.
 
 ## Commit
 
-- Jeden commit na zadanie, na `main`, bez pushu.
-- Wiadomość: `etap N: <co zrobiono>`, np. `etap 3: BPE encode/decode z testem roundtrip`.
-- `Docs/` jest w `.gitignore` i nie trafia do commitów.
-
-## Wpis w Docs/Postep/
-
-Plik `Docs/Postep/RRRR-MM-DD.md`, jeden wpis na zadanie:
-
-```markdown
-### etap N / <nazwa zadania>
-- **Wynik:** zrobione | częściowo | zablokowane
-- **Testy:** `uv run pytest`: 14 passed
-- **Commit:** abc1234
-- **Dalej:** <następne zadanie albo opis blokady>
-```
+- Jeden commit na falę z werdyktem „gotowe”, na `main`, bez pushu.
+- Wiadomość: `zadanie NN fala F: <co zrobiono>`, np. `zadanie 03 fala 1: zliczanie par i merge BPE`.
+- `Docs/` nie trafia do commitów.
