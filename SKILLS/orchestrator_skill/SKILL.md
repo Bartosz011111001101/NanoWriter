@@ -45,7 +45,7 @@ Docs/
       - **wykonawca-kodu**, po jednym na każdy prompt fali: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej.
    3. Wykonawca zgłosił „zablokowane”: odpal plannera z raportem, żeby poprawił prompt, potem jeszcze raz wykonawcę z tym samym modelem.
    4. Gdy wszyscy wrócą, **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.”
-   5. Werdykt **gotowe**: commit (niżej), następna fala.
+   5. Werdykt **gotowe** (testy i sprawdzenie statyczne przechodzą): commit (niżej), następna fala.
    6. Werdykt **niegotowe**: dla każdego nowego pliku w `Prompts/NN-zadanie/poprawki/` odpal wykonawcę kodu, równolegle, jeśli pliki się nie pokrywają. Potem znowu punkt 4 z R+1.
 3. Po ostatniej fali: `superpowers:verification-before-completion` i krótkie podsumowanie dla użytkownika.
 

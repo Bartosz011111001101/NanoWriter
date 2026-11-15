@@ -6,6 +6,7 @@ Format: **Obszar.** Objaw → przyczyna → jak uniknąć.
 
 - **Argumenty domyślne.** Lista lub słownik „pamięta” wartości między wywołaniami → mutowalny argument domyślny (`def f(x=[])`) → `x: list | None = None`, a w ciele `x = [] if x is None else x`.
 - **Kodowanie plików.** Polskie znaki psują się albo jest `UnicodeDecodeError` na Windowsie → `open()` bez `encoding` używa cp1250 → zawsze `encoding="utf-8"`.
+- **Kodowanie konsoli.** Program albo narzędzie wywraca się z `UnicodeEncodeError: 'charmap'` przy wypisywaniu, ale tylko z przekierowanym wyjściem (`>`, plik, agent) → Windows używa cp1250 dla stdout → uruchamiaj z `PYTHONUTF8=1`.
 - **Moduł csv.** Na Windowsie puste linie między wierszami albo `\r\n` zamiast `\n` → plik otwarty bez `newline=""` i domyślny `lineterminator` → `open(..., newline="")` i `csv.writer(f, lineterminator="\n")`.
 - **Zakresy i wycinki.** Brakuje ostatniego elementu albo jeden jest podwójnie → pomylone `range(n)` i `range(n + 1)`, `x[a:b]` z `b` włącznie → sprawdź przykład z docstringu na granicy (0, 1, n).
 - **Puste wejście.** `IndexError` albo `ZeroDivisionError` dla pustej listy lub tekstu → kod zakłada co najmniej jeden element → obsłuż pusty przypadek na początku funkcji, zgodnie z docstringiem.

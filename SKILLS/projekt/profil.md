@@ -21,7 +21,19 @@ Mały LLM (decoder-only transformer) budowany od zera. Cel: model pisze płynny 
 | Wszystkie testy | `uv run pytest` |
 | Jeden plik testów | `uv run pytest <plik>` |
 | Sprawdzenie składni | `uv run python -m py_compile <plik>` |
+| Sprawdzenie statyczne | `uv run ruff check src tests && PYTHONUTF8=1 uv run lint-imports && uv run pylint src` |
+| Mapa kodu | blok niżej |
+| Szukanie istniejącego kodu | blok niżej |
 | Nowa biblioteka | `uv add <pakiet>` (tylko gdy prompt tak mówi) |
+
+Mapa kodu (klasy, funkcje i metody publiczne) oraz szukanie istniejącego kodu po słowach:
+
+```bash
+grep -rnE "^(class|def|async def) |^    (async )?def [a-z]" src/
+grep -rniE "slowo1|slowo2" src/ Docs/Kontrakty/
+```
+
+`PYTHONUTF8=1` jest konieczne: bez niego `lint-imports` na Windowsie wywraca się z `UnicodeEncodeError`, gdy wyjście jest przekierowane. Sprawdzenie statyczne łapie nieużywane importy, podwójne definicje (ruff), import z wyższej warstwy i cykle (import-linter), a także skopiowane bloki kodu (pylint). Konfiguracja jest w `pyproject.toml`.
 
 ## Układ repozytorium
 
@@ -51,6 +63,14 @@ Każdy moduł to plik kodu i kontrakt `Docs/Kontrakty/<modul>.md`.
 | `train` | pętla treningu, optymalizator, harmonogram LR, checkpointy | 1, 5 |
 | `sample` | generowanie: temperatura, top-k, top-p, KV cache | 1, 6 |
 | `evaluate` | strata walidacyjna, perplexity, stały zestaw promptów | 7 |
+
+## Warstwy
+
+Moduł importuje tylko z warstw niższych od siebie. Kolejność od najwyższej do najniższej:
+
+`evaluate → sample → train → model → dataset → tokenizer → data`
+
+Skrypty w `scripts/` mogą importować z każdej warstwy. Reguła jest wymuszona przez import-linter (`[tool.importlinter]` w `pyproject.toml`). Nowy moduł wymaga wpisu tutaj i w `pyproject.toml`, więc to decyzja użytkownika.
 
 ## Etapy i testy bramki
 

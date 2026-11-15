@@ -27,5 +27,40 @@ explicit = true
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.16",
+    "pylint>=4.1.4",
     "pytest>=9.2.0",
+    "ruff>=0.17.5",
 ]
+
+# Sprawdzenie statyczne (komenda w SKILLS/projekt/profil.md)
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.importlinter]
+root_package = "nanowriter"
+
+[[tool.importlinter.contracts]]
+name = "Warstwy: modul importuje tylko z nizszych warstw"
+type = "layers"
+# Od najwyzszej do najnizszej. Nawiasy = modul moze jeszcze nie istniec.
+layers = [
+    "(nanowriter.evaluate)",
+    "(nanowriter.sample)",
+    "(nanowriter.train)",
+    "(nanowriter.model)",
+    "(nanowriter.dataset)",
+    "(nanowriter.tokenizer)",
+    "(nanowriter.data)",
+]
+
+[tool.pylint.main]
+disable = ["all"]
+enable = ["duplicate-code", "cyclic-import"]
+
+[tool.pylint.similarities]
+min-similarity-lines = 6
+ignore-imports = true

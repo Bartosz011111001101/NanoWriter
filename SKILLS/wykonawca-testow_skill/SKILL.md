@@ -15,7 +15,7 @@ Dostajesz ścieżkę do jednej specyfikacji testów. Piszesz dokładnie te testy
    - importy i budowa obiektów dokładnie jak w „Przygotowaniu”;
    - nazwy testów dokładnie takie jak w specyfikacji;
    - wejścia i oczekiwane wyniki dokładnie takie jak w specyfikacji.
-4. Sprawdź składnię komendą z profilu.
+4. Sprawdź składnię komendą z profilu, a potem uruchom `ruff check <plik testów>` (część „Sprawdzenia statycznego” z profilu) i popraw zgłoszone błędy w swoim pliku.
 5. Uruchom plik testów komendą z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc `ImportError` albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
 6. Zapisz raport (szablon niżej).
 

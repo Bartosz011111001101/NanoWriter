@@ -16,6 +16,25 @@ Prompt kodu daje wykonawcy całą wiedzę potrzebną do pracy: co jest teraz w k
 
 `Docs/` jest w `.gitignore`, więc Grep i Glob mogą go pomijać. Listuj przez `ls`, czytaj po pełnej ścieżce.
 
+## Rozpoznanie kodu: gdzie to umieścić
+
+Zanim rozpiszesz prompty, ustal dla każdej rzeczy, której zadanie potrzebuje (funkcja, klasa, stała, typ), czy już istnieje i gdzie ma żyć.
+
+1. Uruchom „Mapę kodu” z profilu. Dostajesz wszystkie klasy, funkcje i metody publiczne projektu.
+2. Dla każdej potrzebnej rzeczy uruchom „Szukanie istniejącego kodu” z profilu. Szukaj po nazwie i po 2–3 słowach opisujących, co robi (np. `path|ścieżk|katalog`).
+3. Rozstrzygnij według tabeli. Bierz pierwszy pasujący wiersz:
+
+| Co znalazłeś | Decyzja | W prompcie |
+| --- | --- | --- |
+| Istnieje i robi dokładnie to | Używasz istniejącego. | „Do użycia” z sygnaturą i importem. |
+| Istnieje i robi prawie to | Rozszerzasz istniejące (nowy argument z wartością domyślną, nowa metoda). Nowej, podobnej funkcji nie tworzysz. | Prompt zmienia tę funkcję: „Było” i „Ma być”. |
+| Potrzebują tego co najmniej dwa moduły | Jedno miejsce: najniższa warstwa, z której oba mogą importować, we wcześniejszej fali. | Wcześniejszy prompt to tworzy, późniejsze mają to w „Do użycia”. |
+| Nie istnieje, pasuje do „Odpowiada za” któregoś modułu z profilu | Nowy kod w tym module. | Zwykły prompt. |
+| Nie istnieje i nie pasuje do żadnego modułu | Nie tworzysz nowego modułu. | Wpis w „Otwartych pytaniach”: proponowany moduł i jego warstwa. |
+
+4. Sprawdź kierunek każdego importu z warstwami z profilu. Import z wyższej warstwy oznacza, że kod jest w złym miejscu: przenieś wspólny kawałek niżej, zamiast importować w górę.
+5. Nowa biblioteka zewnętrzna tylko wtedy, gdy nie wystarczy ani biblioteka standardowa, ani zależności już zainstalowane. Taka biblioteka zawsze trafia do „Otwartych pytań”.
+
 ## Co tworzysz
 
 ```
@@ -60,7 +79,7 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 | --- | --- |
 | Nagłówek | Trudność, Fala, Zależy od, Pliki (tylko te wolno zmieniać), Kontrakt |
 | Cel | Jedno zdanie: co powstaje i po co. |
-| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z `super()`. **Zależności:** dokładne linie importów i kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
+| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z `super()`. **Do użycia:** istniejące funkcje, klasy i stałe z całego projektu, które wykonawca ma wywołać zamiast pisać własne, z sygnaturą i importem (wynik „Rozpoznania kodu”). **Importy:** dokładne linie do dopisania, „wolno z” i „nie wolno z” (moduły według warstw) oraz kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
 | Ma być | Szkielet docelowy: pełne sygnatury z typami, docstring z przykładem wejście → wyjście. Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). |
 | Kroki | Łatwe: każdy krok mechaniczny, w kolejności. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności. |
 | Uwaga | Wpisy z plików pułapek, które dotyczą tego promptu, skopiowane w całości. |
@@ -104,7 +123,8 @@ Eksport rekordów do pliku CSV, wybierany po nazwie formatu `"csv"`.
   EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter}
   ```
 - **Klasy:** `CsvExporter` dziedziczy po `Exporter`. Konstruktora nie nadpisuje, nadpisuje tylko `export`.
-- **Zależności:** dopisz `import csv` na górze pliku. Z `EXPORTERS` korzysta `src/app/cli.py` (`EXPORTERS[fmt](out_dir).export(records, name)`), więc nazwa i typ słownika zostają.
+- **Do użycia:** `self.target_path(name) -> Path` z `Exporter`. Ścieżki nie składaj ręcznie.
+- **Importy:** dopisz `import csv` na górze pliku. Wolno z: biblioteki standardowej. Nie wolno z: `app.cli`. Z `EXPORTERS` korzysta `src/app/cli.py` (`EXPORTERS[fmt](out_dir).export(records, name)`), więc nazwa i typ słownika zostają.
 - **Współbieżność:** brak.
 - **Dane i stan:** CSV w UTF-8, separator `,`, pierwszy wiersz to nagłówki w kolejności kluczy pierwszego rekordu.
 - **Punkt wpięcia:** klasa pod `JsonExporter`, wpis `"csv": CsvExporter` w `EXPORTERS`.
@@ -188,7 +208,10 @@ Szkielety w promptach muszą być zgodne z kontraktem. Każda zmiana kontraktu t
 
 Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 
-- [ ] „Stan obecny” każdego promptu jest przepisany z aktualnego kodu albo z szkieletu promptu wcześniejszej fali, jeśli kod jeszcze nie istnieje.
+- [ ] „Stan obecny” każdego promptu jest przepisany z aktualnego kodu albo ze szkieletu promptu wcześniejszej fali, jeśli kod jeszcze nie istnieje.
+- [ ] Każda nowa funkcja i klasa przeszła „Rozpoznanie kodu”: nic podobnego nie istnieje, a jeśli istnieje, jest w „Do użycia” albo prompt je rozszerza.
+- [ ] Żadna logika nie jest zaplanowana w dwóch promptach naraz.
+- [ ] Każdy import w „Importach” idzie z wyższej warstwy do niższej.
 - [ ] Każdy przykład w docstringu jest policzony ręcznie i się zgadza, łącznie z białymi znakami i typem wyniku.
 - [ ] Żadne dwa prompty jednej fali nie mają wspólnego pliku w „Plikach”.
 - [ ] Wszystko, czego prompt używa, powstaje we wcześniejszej fali albo już istnieje.
@@ -207,6 +230,9 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 | Błąd | Poprawka |
 | --- | --- |
 | „Stan obecny” napisany z pamięci albo z kontraktu | Przeczytaj plik i przepisz zarys z kodu. Wykonawca zablokuje się na pierwszej niezgodności. |
+| Nowa funkcja pomocnicza, choć podobna już istnieje | Uruchom „Szukanie istniejącego kodu” i wpisz znalezioną do „Do użycia”. |
+| Ta sama logika w dwóch promptach różnych modułów | Jeden wcześniejszy prompt w najniższej wspólnej warstwie, w pozostałych „Do użycia”. |
+| Import z wyższej warstwy „bo tam już jest” | Przenieś ten kawałek do niższej warstwy w osobnym, wcześniejszym prompcie. |
 | Szkielet bez typów albo bez przykładu w docstringu | Dopisz typy i przykład wejście → wyjście. |
 | Klasa bez informacji, po czym dziedziczy i co wywołać z `super()` | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
 | Trudność podniesiona, bo algorytm jest trudny, choć kroki go opisują | Zostaw „łatwe”. Trudność to zakres i to, czy rozwiązanie jest rozpisane. |

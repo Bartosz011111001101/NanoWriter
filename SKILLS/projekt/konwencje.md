@@ -13,6 +13,15 @@ Czytają je wykonawcy kodu i testów na starcie. Planner nie powtarza ich w prom
 - Ścieżki jako `pathlib.Path`.
 - Skrypty w `scripts/` tylko parsują argumenty i wywołują funkcje z modułów.
 
+## Zależności i struktura
+
+- Publiczne jest tylko to, co jest w kontrakcie modułu. Funkcja pomocnicza wykonawcy ma nazwę `_nazwa` i nikt spoza jej pliku jej nie importuje.
+- Importy tylko z niższych warstw (kolejność w profilu).
+- Na poziomie modułu tylko importy, definicje i stałe. Bez wczytywania plików, inicjalizacji CUDA i `print` przy imporcie.
+- Bez globalnego stanu. Konfiguracja przychodzi argumentem (dataclass), a nie z globalnej zmiennej ani singletonu.
+- Stała albo typ (np. `GPTConfig`) ma jedno miejsce definicji. Inne moduły go importują, a nie kopiują.
+- Import potrzebny tylko do adnotacji idzie pod `if TYPE_CHECKING:`, żeby nie tworzył zależności w czasie działania.
+
 ## Testy
 
 - Domyślnie CPU i malutki model (np. 2 warstwy, `d_model=32`, vocab 64, kontekst 16). Cały plik ma trwać kilka sekund.

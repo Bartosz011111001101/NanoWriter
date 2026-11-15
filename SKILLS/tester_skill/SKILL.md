@@ -96,14 +96,17 @@ Każdy test ma dokładne wejście i dokładny oczekiwany wynik. Wykonawca niczeg
 
 ## Tryb WERYFIKACJA
 
-1. Użyj `superpowers:verification-before-completion`. Uruchom pełny zestaw testów komendą z profilu.
-2. Dla każdego nieprzechodzącego testu rozstrzygnij, gdzie jest błąd:
+1. Użyj `superpowers:verification-before-completion`. Uruchom pełny zestaw testów i „Sprawdzenie statyczne”, obie komendy z profilu. Werdykt „gotowe” tylko wtedy, gdy przechodzą obie.
+2. Dla każdego nieprzechodzącego testu i błędu sprawdzenia statycznego rozstrzygnij, gdzie jest błąd:
 
 | Sytuacja | Błąd w | Działanie |
 | --- | --- | --- |
 | Test sprawdza coś innego, niż mówi specyfikacja, albo ma literówkę lub zły import | teście | Odpal `wykonawca-testow` (model według tabeli „Model wykonawcy testów”) z poprawioną specyfikacją, uruchom testy ponownie. |
 | Specyfikacja testu przeczy szkieletowi albo kontraktowi | specyfikacji | Popraw specyfikację, potem jak wyżej. |
 | Kod łamie szkielet, docstring albo kontrakt | kodzie | Napisz `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`. Kodu nie poprawiasz. |
+| Sprawdzenie statyczne zgłasza błąd w pliku kodu (import z wyższej warstwy, cykl, podwójna definicja, skopiowany blok) | kodzie | Poprawka jak wyżej. Przy skopiowanym bloku w „Do użycia” wskaż oryginał. |
+| Sprawdzenie statyczne zgłasza błąd w pliku testów | teście | Jak przy błędzie w teście. |
+| Kod musiał złamać warstwy, bo tak go zaplanowano | kontrakcie | Zgłoś to orkiestratorowi. Rozstrzyga planner. |
 | Szkielet i kontrakt są ze sobą sprzeczne albo niejasne | kontrakcie | Zgłoś to orkiestratorowi. Rozstrzyga planner. |
 
 3. Hipotezę przyczyny błędu w kodzie zacznij od plików pułapek z profilu.
@@ -143,7 +146,8 @@ Wykonawca poprawki może uruchamiać testy, ale nie może ich zmieniać.
 # Weryfikacja: zadanie 05, fala 2
 
 ## Runda 1
-- **Komenda:** `uv run pytest` → 14 passed, 2 failed
+- **Testy:** `uv run pytest` → 14 passed, 2 failed
+- **Sprawdzenie statyczne:** przechodzi | <liczba błędów, pliki>
 
 | Test | Przyczyna | Błąd w | Działanie |
 | --- | --- | --- | --- |

@@ -14,12 +14,15 @@ Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i 
 3. Przeczytaj pliki z listy „Pliki”, jeśli już istnieją, i porównaj je z sekcją „Stan obecny”.
 4. Zaimplementuj „Ma być” według „Kroków”:
    - nazwy, argumenty, typy, klasy bazowe i zwracane wartości bez zmian;
-   - kod w miejscu z „Punktu wpięcia”, importy z „Zależności”;
+   - kod w miejscu z „Punktu wpięcia”, importy dokładnie z „Importów”;
+   - wszystko z „Do użycia” wywołujesz, a nie piszesz od nowa;
+   - funkcja pomocnicza spoza szkieletu ma nazwę `_nazwa` i zostaje w swoim pliku;
    - docstringi zostają tak, jak są w szkielecie;
    - przykłady z docstringów muszą działać;
    - każdy wpis z sekcji „Uwaga” ma być obsłużony w kodzie.
 5. Wykonaj sprawdzenie z „Gotowe, gdy” i porównaj wynik z oczekiwanym.
-6. Zapisz raport (szablon niżej).
+6. Uruchom „Sprawdzenie statyczne” z profilu i popraw błędy w swoich plikach. Błędy w plikach spoza listy „Pliki” zostawiasz i opisujesz w raporcie, bo mogą pochodzić od równoległego wykonawcy.
+7. Zapisz raport (szablon niżej).
 
 ## Prompt trudny
 
@@ -37,6 +40,7 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
   - „Stan obecny” nie zgadza się z kodem w pliku (inna sygnatura, brak klasy, inna klasa bazowa);
   - przykład w docstringu przeczy krokom albo innemu przykładowi;
   - brakuje funkcji lub importu, którego prompt wymaga;
+  - zadanie da się zrobić tylko przez import spoza „wolno z” albo przez kopię kodu, który już istnieje gdzie indziej;
   - typ albo zachowanie jest niejasne.
 
 ## Raport
@@ -49,6 +53,8 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
 - **Wynik:** zrobione | zablokowane
 - **Zmienione pliki:** src/app/exporters.py
 - **Sprawdzenie:** `<komenda z "Gotowe, gdy">` → `'a,b\n1,2\n'`
+- **Sprawdzenie statyczne:** przechodzi | <błędy w cudzych plikach>
+- **Funkcje pomocnicze:** brak | `_nazwa` w <plik>: <co robi>
 - **Odstępstwa od szkieletu:** brak | <co i dlaczego>
 - **Projekt:** nie dotyczy | <tylko prompt trudny: klasy, funkcje pomocnicze, przepływ danych>
 - **Uwagi dla następnych fal:** brak | <np. export przyjmuje też pustą listę>
