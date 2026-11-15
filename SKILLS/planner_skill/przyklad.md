@@ -56,13 +56,12 @@ EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter
 ```
 
 ## Kroki
-1. Dopisz `import csv` do importów.
-2. Pod `JsonExporter` dodaj klasę `CsvExporter` z `extension = "csv"`.
-3. W `export`: `path = self.target_path(name)`, otwórz `path` w trybie `"w"` z `encoding="utf-8", newline=""`.
-4. Gdy `records` jest pusta, zostaw plik pusty i zwróć `path`.
-5. W przeciwnym razie: `csv.DictWriter(f, fieldnames=list(records[0]), lineterminator="\n")`, potem `writeheader()` i `writerows(records)`.
-6. Zwróć `path`.
-7. Dopisz `"csv": CsvExporter` do `EXPORTERS`.
+1. `export(records, name)` → zapisuje plik pod `self.target_path(name)` i zwraca tę ścieżkę.
+2. Pusta lista `records` → pusty plik.
+3. Niepusta lista → pierwszy wiersz to nagłówki: klucze pierwszego rekordu w ich kolejności.
+4. Każdy rekord → jeden wiersz wartości w kolejności nagłówków.
+5. Plik → UTF-8, separator `,`, każdy wiersz kończy się `\n`, także ostatni.
+6. `EXPORTERS["csv"]` → `CsvExporter`. `EXPORTERS["json"]` bez zmian.
 
 ## Uwaga
 - **Moduł csv.** Na Windowsie puste linie między wierszami albo `\r\n` zamiast `\n` → plik otwarty bez `newline=""` i domyślny `lineterminator` → `open(..., newline="")` i `csv.writer(f, lineterminator="\n")`.

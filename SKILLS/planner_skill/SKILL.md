@@ -7,6 +7,8 @@ description: Używaj, gdy zadanie trzeba rozpisać na fale i prompty kodu dla wy
 
 Prompt kodu daje wykonawcy całą wiedzę potrzebną do pracy: co jest teraz w kodzie, co ma powstać, gdzie to wpiąć i na co uważać. Wykonawca nie przeszukuje repozytorium i nie projektuje niczego, czego prompt mu wprost nie zleca. Dobrze rozpisany prompt zrobi Haiku, nawet jeśli to cała klasa z dziedziczeniem albo trudny algorytm.
 
+**Ty projektujesz, wykonawca implementuje.** Projekt to struktura (pliki, klasy, dziedziczenie), sygnatury (argumenty, typy, zwracane wartości) i zachowanie (co ma się stać dla jakiego wejścia). Implementacja, czyli ciała funkcji, należy do wykonawcy. W prompcie nie piszesz ciał funkcji ani kodu w krokach.
+
 ## Na start czytasz
 
 1. `SKILLS/projekt/profil.md`: stack, komendy, układ repozytorium, mapa modułów, etapy, decyzje użytkownika.
@@ -65,7 +67,7 @@ Trudność zależy od zakresu zmian i od tego, czy umiesz rozwiązanie rozpisać
 | --- | --- | --- |
 | trudne | Opus | Nie umiesz rozpisać rozwiązania z góry, bo trzeba je zaprojektować albo zbadać, **albo** prompt zmienia więcej niż 5 plików. |
 | średnie | Sonnet | Prompt zmienia 3–5 plików **albo** przerabia istniejącą logikę, z której korzystają inne moduły, i zmiany muszą się zgadzać w kilku miejscach. |
-| łatwe | Haiku | Do 2 plików, a rozwiązanie jest rozpisane w całości w sekcjach „Stan obecny”, „Ma być” i „Kroki”. |
+| łatwe | Haiku | Do 2 plików, struktura i sygnatury są ustalone, a każdy przypadek zachowania jest wypisany w „Krokach”. |
 
 Testy nigdy nie idą na Haiku. Model wykonawcy testów dobiera tester (minimum Sonnet).
 
@@ -99,10 +101,10 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 - **Nie ruszać:** <co zostaje bez zmian>
 
 ## Ma być
-<szkielet w języku projektu: pełne sygnatury z typami, docstring z przykładem wejście → wyjście>
+<szkielet w języku projektu: pełne sygnatury z typami, docstring z przykładem wejście → wyjście, ciało pominięte (np. `...`)>
 
 ## Kroki
-1. <krok>
+1. <wejście albo warunek> → <efekt>
 
 ## Uwaga
 - <wpis z pliku pułapek, skopiowany w całości> | brak
@@ -116,7 +118,10 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 
 **Ma być.** Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). Prompt trudny: ustalasz granice, czyli publiczne sygnatury, niezmienniki i to, co ma przejść. Środek oznaczasz jako „Do zaprojektowania przez wykonawcę: …”. Wykonawca opisuje swój projekt w raporcie, a Ty bierzesz go do promptów następnych fal.
 
-**Kroki.** Łatwe: każdy krok mechaniczny, w kolejności, z nazwami ze szkieletu. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności.
+**Kroki.** Zachowanie, nie kod. Każdy krok ma postać „wejście albo warunek → efekt” i używa tylko nazw ze szkieletu i z „Do użycia”. Nie podajesz wywołań bibliotek ani instrukcji języka. Jeśli wynik zależy od konkretnego wywołania (np. tryb otwarcia pliku, wymiar operacji), opisujesz to w „Uwadze” jako pułapkę. Ile kroków:
+- łatwe: każdy przypadek osobno, łącznie z pustym wejściem, granicami i błędami;
+- średnie: zachowanie każdej funkcji i to, jak funkcje ze sobą współpracują;
+- trudne: niezmienniki, które muszą zachodzić, i sposób sprawdzenia poprawności.
 
 **Gotowe, gdy.** Jedna linia, komenda z profilu. Działa w kilka sekund, bez GPU, bez sieci i bez zapisu poza katalogiem tymczasowym. W kodzie wpisanym w komendę tylko ASCII i cudzysłowy pojedyncze. Nigdy nie wymaga testów, bo wykonawca kodu ich nie pisze.
 
@@ -165,7 +170,8 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 - [ ] Żadne dwa prompty jednej fali nie mają wspólnego pliku w „Plikach”.
 - [ ] Wszystko, czego prompt używa, powstaje we wcześniejszej fali albo już istnieje.
 - [ ] Szkielety zgadzają się z kontraktem.
-- [ ] Trudność wynika z tabeli, czyli liczby plików i tego, czy rozwiązanie jest rozpisane.
+- [ ] Trudność wynika z tabeli, czyli liczby plików i tego, czy każdy przypadek zachowania jest wypisany.
+- [ ] W „Ma być” nie ma ciał funkcji, a w „Krokach” kodu ani wywołań bibliotek.
 - [ ] Komenda „Gotowe, gdy” spełnia zasady.
 
 ## Odpowiedź dla orkiestratora
@@ -183,6 +189,7 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 | Ta sama logika w dwóch promptach różnych modułów | Jeden wcześniejszy prompt w najniższej wspólnej warstwie, w pozostałych „Do użycia”. |
 | Import z wyższej warstwy „bo tam już jest” | Przenieś ten kawałek do niższej warstwy w osobnym, wcześniejszym prompcie. |
 | Szkielet bez typów albo bez przykładu w docstringu | Dopisz typy i przykład wejście → wyjście. |
+| Ciało funkcji w „Ma być” albo kod i wywołania bibliotek w „Krokach” | Zostaw sygnaturę z pominiętym ciałem. Kroki zapisz jako „wejście → efekt”. Szczegół wywołania, od którego zależy wynik, przenieś do „Uwagi”. |
 | Klasa bez informacji, po czym dziedziczy i co wywołać z klasy bazowej | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
 | Trudność podniesiona, bo algorytm jest trudny, choć kroki go opisują | Zostaw „łatwe”. Trudność to zakres i to, czy rozwiązanie jest rozpisane. |
 | Jeden moduł na falę, przez co fal jest dużo | Połącz w jednej fali prompty z różnych modułów. |

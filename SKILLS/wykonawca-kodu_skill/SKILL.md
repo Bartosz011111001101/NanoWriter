@@ -12,7 +12,7 @@ Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i 
 1. Przeczytaj `SKILLS/projekt/profil.md` (komendy) i `SKILLS/projekt/konwencje.md` (styl kodu).
 2. Przeczytaj prompt (pełna ścieżka od zlecającego). `Docs/` jest w `.gitignore`, więc czytaj po pełnej ścieżce. Kontrakt z nagłówka czytaj tylko wtedy, gdy prompt czegoś nie rozstrzyga.
 3. Przeczytaj pliki z listy „Pliki”, jeśli już istnieją, i porównaj je z sekcją „Stan obecny”.
-4. Zaimplementuj „Ma być” według „Kroków”:
+4. Zaimplementuj „Ma być” według „Kroków”. Ciała funkcji piszesz sam: „Kroki” mówią, co ma się stać dla jakiego wejścia, a sposób zapisu w kodzie wybierasz Ty.
    - nazwy, argumenty, typy, klasy bazowe i zwracane wartości bez zmian;
    - kod w miejscu z „Punktu wpięcia”, importy dokładnie z „Importów”;
    - wszystko z „Do użycia” wywołujesz, a nie piszesz od nowa;
