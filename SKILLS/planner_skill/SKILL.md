@@ -79,7 +79,7 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 | --- | --- |
 | Nagłówek | Trudność, Fala, Zależy od, Pliki (tylko te wolno zmieniać), Kontrakt |
 | Cel | Jedno zdanie: co powstaje i po co. |
-| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z `super()`. **Do użycia:** istniejące funkcje, klasy i stałe z całego projektu, które wykonawca ma wywołać zamiast pisać własne, z sygnaturą i importem (wynik „Rozpoznania kodu”). **Importy:** dokładne linie do dopisania, „wolno z” i „nie wolno z” (moduły według warstw) oraz kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
+| Stan obecny | **Pliki** (które istnieją, które są nowe). **Struktura** każdego zmienianego pliku: importy, klasy, funkcje, sygnatury, zarys bez ciał. **Klasy:** po czym dziedziczy, konstruktor, pola, które metody nadpisać, co wywołać z klasy bazowej. **Do użycia:** istniejące funkcje, klasy i stałe z całego projektu, które wykonawca ma wywołać zamiast pisać własne, z sygnaturą i importem (wynik „Rozpoznania kodu”). **Importy:** dokładne linie do dopisania, „wolno z” i „nie wolno z” (moduły według warstw) oraz kto korzysta z tego kodu. **Współbieżność:** workery, wątki, procesy, async; co działa gdzie, jak się komunikuje, start i stop. **Dane i stan:** formaty plików, konfiguracja, zmienne środowiska. **Punkt wpięcia:** gdzie dokładnie dopisać. **Nie ruszać:** co zostaje bez zmian. |
 | Ma być | Szkielet docelowy: pełne sygnatury z typami, docstring z przykładem wejście → wyjście. Zmiana istniejącej funkcji: „Było” (zarys) i „Ma być” (pełny szkielet). |
 | Kroki | Łatwe: każdy krok mechaniczny, w kolejności. Średnie: kroki dla każdej funkcji. Trudne: kolejność pracy i sposób sprawdzenia poprawności. |
 | Uwaga | Wpisy z plików pułapek, które dotyczą tego promptu, skopiowane w całości. |
@@ -234,7 +234,7 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 | Ta sama logika w dwóch promptach różnych modułów | Jeden wcześniejszy prompt w najniższej wspólnej warstwie, w pozostałych „Do użycia”. |
 | Import z wyższej warstwy „bo tam już jest” | Przenieś ten kawałek do niższej warstwy w osobnym, wcześniejszym prompcie. |
 | Szkielet bez typów albo bez przykładu w docstringu | Dopisz typy i przykład wejście → wyjście. |
-| Klasa bez informacji, po czym dziedziczy i co wywołać z `super()` | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
+| Klasa bez informacji, po czym dziedziczy i co wywołać z klasy bazowej | Uzupełnij pole „Klasy” w „Stanie obecnym”. |
 | Trudność podniesiona, bo algorytm jest trudny, choć kroki go opisują | Zostaw „łatwe”. Trudność to zakres i to, czy rozwiązanie jest rozpisane. |
 | Jeden moduł na falę, przez co fal jest dużo | Połącz w jednej fali prompty z różnych modułów. |
 | Dwa prompty jednej fali zmieniają ten sam plik | Przenieś jeden do następnej fali. |

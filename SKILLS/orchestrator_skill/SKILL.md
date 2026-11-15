@@ -75,6 +75,17 @@ Testy nigdy nie idą na Haiku.
 
 Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi test bramki z profilu. Planner umieszcza go w ostatniej fali.
 
+## Przeniesienie do nowego projektu
+
+| Co | Jak |
+| --- | --- |
+| `.claude/agents/`, `SKILLS/*_skill/`, `.claude/settings.json` (plugin superpowers) | kopiujesz bez zmian |
+| `SKILLS/projekt/pulapki/` | kopiujesz pliki pasujących technologii, brakujące technologie zaczynasz od pustego pliku w tym samym formacie |
+| `SKILLS/projekt/profil.md`, `konwencje.md`, `katalog-testow.md` | piszesz od nowa: stack, komendy, układ, warstwy, moduły, etapy z bramkami, decyzje użytkownika, ograniczenia |
+| Narzędzia sprawdzenia statycznego | instalujesz i konfigurujesz warstwy (w Pythonie: ruff, import-linter, pylint w `pyproject.toml`), komendy wpisujesz do profilu |
+| `CLAUDE.md` | krótki opis projektu i dwa importy: `@.claude/agents/orchestrator.md`, `@SKILLS/orchestrator_skill/SKILL.md` |
+| `.gitignore` | wpis `Docs/` |
+
 ## Commit
 
 - Jeden commit na falę z werdyktem „gotowe”, na `main`, bez pushu.

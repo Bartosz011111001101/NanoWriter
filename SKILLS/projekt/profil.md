@@ -21,6 +21,7 @@ Mały LLM (decoder-only transformer) budowany od zera. Cel: model pisze płynny 
 | Wszystkie testy | `uv run pytest` |
 | Jeden plik testów | `uv run pytest <plik>` |
 | Sprawdzenie składni | `uv run python -m py_compile <plik>` |
+| Sprawdzenie statyczne jednego pliku | `uv run ruff check <plik>` |
 | Sprawdzenie statyczne | `uv run ruff check src tests && PYTHONUTF8=1 uv run lint-imports && uv run pylint src` |
 | Mapa kodu | blok niżej |
 | Szukanie istniejącego kodu | blok niżej |

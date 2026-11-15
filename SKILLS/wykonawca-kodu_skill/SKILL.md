@@ -16,7 +16,7 @@ Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i 
    - nazwy, argumenty, typy, klasy bazowe i zwracane wartości bez zmian;
    - kod w miejscu z „Punktu wpięcia”, importy dokładnie z „Importów”;
    - wszystko z „Do użycia” wywołujesz, a nie piszesz od nowa;
-   - funkcja pomocnicza spoza szkieletu ma nazwę `_nazwa` i zostaje w swoim pliku;
+   - funkcja pomocnicza spoza szkieletu jest prywatna według konwencji projektu i zostaje w swoim pliku;
    - docstringi zostają tak, jak są w szkielecie;
    - przykłady z docstringów muszą działać;
    - każdy wpis z sekcji „Uwaga” ma być obsłużony w kodzie.
@@ -54,7 +54,7 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
 - **Zmienione pliki:** src/app/exporters.py
 - **Sprawdzenie:** `<komenda z "Gotowe, gdy">` → `'a,b\n1,2\n'`
 - **Sprawdzenie statyczne:** przechodzi | <błędy w cudzych plikach>
-- **Funkcje pomocnicze:** brak | `_nazwa` w <plik>: <co robi>
+- **Funkcje pomocnicze:** brak | <nazwa> w <plik>: <co robi>
 - **Odstępstwa od szkieletu:** brak | <co i dlaczego>
 - **Projekt:** nie dotyczy | <tylko prompt trudny: klasy, funkcje pomocnicze, przepływ danych>
 - **Uwagi dla następnych fal:** brak | <np. export przyjmuje też pustą listę>
