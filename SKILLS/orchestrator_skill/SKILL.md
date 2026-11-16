@@ -9,7 +9,7 @@ Orkiestrator nie pisze kodu, testów ani promptów. Odpala agentów, pilnuje kol
 
 ## Mapa Docs/
 
-`NN-zadanie` to folder jednego zadania (np. `03-tokenizer`). `PP-nazwa` to jeden prompt (np. `01-pary`). Ten sam `PP-nazwa` w każdym folderze dotyczy tego samego kawałka pracy, więc czytasz zawsze tylko jeden plik.
+`NN-zadanie` to folder jednego zadania (np. `05-eksport`). `PP-nazwa` to jeden prompt (np. `02-eksport-csv`). Ten sam `PP-nazwa` w każdym folderze dotyczy tego samego kawałka pracy, więc czytasz zawsze tylko jeden plik.
 
 ```
 Docs/
@@ -66,7 +66,7 @@ Testy nigdy nie idą na Haiku.
 ## Kiedy pytać użytkownika
 
 - Decyzje użytkownika wymienione w profilu.
-- Operacje z sekcji „Ograniczenia” w profilu (np. długi trening, duże pobieranie).
+- Operacje z sekcji „Ograniczenia” w profilu.
 - Zmiana kontraktu, który ma już kod i testy.
 - Gdy poprawka nie wychodzi nawet na Opusie.
 - Gdy planner zwróci „Otwarte pytania” inne niż „brak”.
@@ -81,14 +81,15 @@ Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi tes
 | --- | --- |
 | `.claude/agents/`, `SKILLS/*_skill/`, `.claude/settings.json` (plugin superpowers) | kopiujesz bez zmian |
 | `SKILLS/projekt/pulapki/` | kopiujesz pliki pasujących technologii, brakujące technologie zaczynasz od pustego pliku w tym samym formacie |
-| `SKILLS/projekt/profil.md`, `konwencje.md`, `katalog-testow.md` | piszesz od nowa: stack, komendy, układ, warstwy, moduły, etapy z bramkami, decyzje użytkownika, ograniczenia |
-| Narzędzia sprawdzenia statycznego | instalujesz i konfigurujesz warstwy (w Pythonie: ruff, import-linter, pylint w `pyproject.toml`), komendy wpisujesz do profilu |
-| `CLAUDE.md` | krótki opis projektu i dwa importy: `@.claude/agents/orchestrator.md`, `@SKILLS/orchestrator_skill/SKILL.md` |
+| `SKILLS/projekt/profil.md`, `konwencje.md`, `katalog-testow.md` | piszesz od nowa według `SKILLS/orchestrator_skill/szablon-profilu.md`. Każda sekcja i każda komenda z szablonu musi istnieć albo mieć wartość „brak”. |
+| Narzędzia sprawdzenia statycznego | instalujesz narzędzia, które łapią: nieużywany kod i podwójne definicje, cykle zależności, skopiowane bloki, a w projekcie z warstwami także import z wyższej warstwy. Komendy i pliki konfiguracji wpisujesz do profilu. Przykład dla Pythona: ruff, import-linter, pylint. |
+| `CLAUDE.md` | kopiujesz bez zmian. Zawiera trzy importy: `@.claude/agents/orchestrator.md`, `@SKILLS/orchestrator_skill/SKILL.md`, `@SKILLS/projekt/profil.md` |
 | `.gitignore` | wpis `Docs/` |
+| Platforma | Claude Code z modelami `haiku`, `sonnet`, `opus`, z pluginem superpowers (katalog pluginów musi być dodany na komputerze) i z możliwością odpalania agentów przez agenta. Po zmianie nazw modeli poprawiasz tabele w `orchestrator_skill`, `planner_skill`, `tester_skill` i pole `model:` w agentach `wykonawca-kodu` i `wykonawca-testow`. Instrukcje są po polsku. |
 
 ## Commit
 
-- Jeden commit na falę z werdyktem „gotowe”, na `main`, bez pushu.
+- Jeden commit na falę z werdyktem „gotowe”, na gałęzi z sekcji „Git” profilu. Push tylko wtedy, gdy ta sekcja na to pozwala.
 - Do commita trafiają też pułapki dopisane przez testera w `SKILLS/projekt/pulapki/`.
-- Wiadomość: `zadanie NN fala F: <co zrobiono>`, np. `zadanie 03 fala 1: zliczanie par i merge BPE`.
+- Wiadomość: `zadanie NN fala F: <co zrobiono>`, np. `zadanie 05 fala 2: eksport do CSV`.
 - `Docs/` nie trafia do commitów.

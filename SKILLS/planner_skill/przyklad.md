@@ -1,6 +1,6 @@
 # Przykład: wypełniony prompt kodu
 
-Ilustracja poziomu szczegółu, który wystarcza Haiku. Projekt i nazwy są zmyślone, liczy się tylko układ i dokładność sekcji. Ogólny szablon jest w `SKILL.md`.
+Ilustracja poziomu szczegółu, który wystarcza Haiku. Projekt i nazwy są zmyślone. Przykład jest w Pythonie tylko dlatego, że jakiś język trzeba było wybrać. Język, komendy, ścieżki i nazwy plików bierzesz z profilu swojego projektu, a stąd tylko układ i dokładność sekcji. Ogólny szablon jest w `SKILL.md`.
 
 # 02-eksport-csv
 
@@ -31,7 +31,7 @@ Eksport rekordów do pliku CSV, wybierany po nazwie formatu `"csv"`.
 
   EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter}
   ```
-- **Klasy:** `CsvExporter` dziedziczy po `Exporter`. Konstruktora nie nadpisuje, nadpisuje tylko `export`.
+- **Typy:** `CsvExporter` dziedziczy po `Exporter`. Konstruktora nie nadpisuje, nadpisuje tylko `export`.
 - **Do użycia:** `self.target_path(name) -> Path` z `Exporter`. Ścieżki nie składaj ręcznie.
 - **Importy:** dopisz `import csv` na górze pliku. Wolno z: biblioteki standardowej. Nie wolno z: `app.cli`. Z `EXPORTERS` korzysta `src/app/cli.py` (`EXPORTERS[fmt](out_dir).export(records, name)`), więc nazwa i typ słownika zostają.
 - **Współbieżność:** brak.
@@ -65,7 +65,7 @@ EXPORTERS: dict[str, type[Exporter]] = {"json": JsonExporter, "csv": CsvExporter
 
 ## Uwaga
 - **Moduł csv.** Na Windowsie puste linie między wierszami albo `\r\n` zamiast `\n` → plik otwarty bez `newline=""` i domyślny `lineterminator` → `open(..., newline="")` i `csv.writer(f, lineterminator="\n")`.
-- **Puste wejście.** `IndexError` dla pustej listy → kod zakłada co najmniej jeden element → obsłuż pusty przypadek na początku funkcji, zgodnie z docstringiem.
+- **Puste wejście.** `IndexError` dla pustej listy → kod zakłada co najmniej jeden element → obsłuż pusty przypadek na początku funkcji, zgodnie z opisem funkcji.
 
 ## Gotowe, gdy
 - `uv run python -c "import tempfile; from pathlib import Path; from app.exporters import EXPORTERS; p = EXPORTERS['csv'](Path(tempfile.mkdtemp())).export([{'a': '1', 'b': '2'}], 'x'); print(repr(p.read_text(encoding='utf-8')))"` wypisuje `'a,b\n1,2\n'`.

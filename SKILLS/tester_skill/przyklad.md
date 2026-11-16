@@ -1,6 +1,6 @@
 # Przykład: specyfikacja, poprawka i weryfikacja
 
-Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład co w `SKILLS/planner_skill/przyklad.md`), liczy się tylko układ i dokładność. Ogólne szablony są w `SKILL.md`.
+Ilustracja poziomu szczegółu. Projekt i nazwy są zmyślone (ten sam przykład co w `SKILLS/planner_skill/przyklad.md`). Język, komendy, ścieżki i zapis nazwy testu bierzesz z profilu swojego projektu, a stąd tylko układ i dokładność. Ogólne szablony są w `SKILL.md`.
 
 ## Specyfikacja testów
 

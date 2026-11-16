@@ -15,8 +15,8 @@ Dostajesz ścieżkę do jednej specyfikacji testów. Piszesz dokładnie te testy
    - importów i obiektów z „Przygotowania”;
    - nazw testów;
    - danych wejściowych i oczekiwanych wyników, co do znaku.
-4. Sprawdź składnię, a potem uruchom „Sprawdzenie statyczne jednego pliku” na pliku testów. Obie komendy są w profilu. Popraw zgłoszone błędy w swoim pliku.
-5. Uruchom plik testów komendą z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc błąd importu albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
+4. Uruchom „Sprawdzenie składni” i „Sprawdzenie statyczne jednego pliku” z profilu na pliku testów. Komendę z wartością „brak” pomijasz. Popraw błędy, które dotyczą Twojego pliku. Błąd, który wynika tylko z tego, że testowany kod jeszcze nie istnieje (nieznany import, nieznana nazwa, błąd kompilacji na brakującym symbolu), zostawiasz i wpisujesz do raportu.
+5. Uruchom plik testów komendą „Jeden plik testów” z profilu. Kod może jeszcze nie istnieć, bo powstaje równolegle, więc błąd braku testowanego kodu (import, kompilacja) albo nieprzechodzące testy są wtedy w porządku. Zapisz wynik w raporcie.
 6. Zapisz raport (szablon niżej).
 
 Przykład zamiany specyfikacji na test: `SKILLS/wykonawca-testow_skill/przyklad.md`.
@@ -38,7 +38,7 @@ Przykład zamiany specyfikacji na test: `SKILLS/wykonawca-testow_skill/przyklad.
 - **Wynik:** zrobione | zablokowane
 - **Plik testów:** <ścieżka>
 - **Liczba testów:** <liczba>
-- **Uruchomienie:** `<komenda z profilu>` → <błąd importu (kod jeszcze nie istnieje) | liczba passed, failed>
+- **Uruchomienie:** `<komenda z profilu>` → <brak testowanego kodu (jeszcze nie istnieje) | ile testów przeszło, ile nie>
 - **Uwagi:** brak | <niejasność w specyfikacji, brakujący przypadek>
 ```
 

@@ -27,6 +27,8 @@ Mały LLM (decoder-only transformer) budowany od zera. Cel: model pisze płynny 
 | Szukanie istniejącego kodu | blok niżej |
 | Nowa biblioteka | `uv add <pakiet>` (tylko gdy prompt tak mówi) |
 
+„Szybkie sprawdzenie” działa bez GPU.
+
 Mapa kodu (klasy, funkcje i metody publiczne) oraz szukanie istniejącego kodu po słowach:
 
 ```bash
@@ -34,7 +36,11 @@ grep -rnE "^(class|def|async def) |^    (async )?def [a-z]" src/
 grep -rniE "slowo1|slowo2" src/ Docs/Kontrakty/
 ```
 
-`PYTHONUTF8=1` jest konieczne: bez niego `lint-imports` na Windowsie wywraca się z `UnicodeEncodeError`, gdy wyjście jest przekierowane. Sprawdzenie statyczne łapie nieużywane importy, podwójne definicje (ruff), import z wyższej warstwy i cykle (import-linter), a także skopiowane bloki kodu (pylint). Konfiguracja jest w `pyproject.toml`.
+`PYTHONUTF8=1` jest konieczne: bez niego `lint-imports` na Windowsie wywraca się z `UnicodeEncodeError`, gdy wyjście jest przekierowane. Sprawdzenie statyczne łapie nieużywane importy, podwójne definicje (ruff), import z wyższej warstwy i cykle (import-linter), a także skopiowane bloki kodu (pylint).
+
+## Konfiguracja sprawdzenia statycznego
+
+Plik `pyproject.toml`, sekcje `[tool.ruff]`, `[tool.ruff.lint]`, `[tool.importlinter]`, `[[tool.importlinter.contracts]]`, `[tool.pylint.main]`, `[tool.pylint.similarities]`. Tylko do odczytu, tak jak instrukcje.
 
 ## Układ repozytorium
 
@@ -75,8 +81,6 @@ Skrypty w `scripts/` mogą importować z każdej warstwy. Reguła jest wymuszona
 
 ## Etapy i testy bramki
 
-Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi test bramki. Planner umieszcza go w ostatniej fali.
-
 | Etap | Test bramki |
 | --- | --- |
 | 1 Bigram | Strata treningowa spada, `generate` zwraca tekst o zadanej długości. |
@@ -97,6 +101,10 @@ Agenci ich nie podejmują, tylko pytają: język i rodzaj tekstu, źródło dany
 Użytkownik korzysta z komputera w trakcie pracy agentów. Zapytaj przed:
 - treningiem dłuższym niż ~15 minut;
 - pobieraniem więcej niż ~1 GB danych.
+
+## Git
+
+Commity na `main`. Bez pushu bez prośby użytkownika.
 
 ## Liczby do planowania
 

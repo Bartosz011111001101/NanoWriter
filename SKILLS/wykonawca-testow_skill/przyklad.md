@@ -1,6 +1,6 @@
 # Przykład: ze specyfikacji do testu
 
-Ilustracja. Projekt i nazwy są zmyślone (ten sam przykład co w `SKILLS/tester_skill/przyklad.md`). Pokazuje, że test robi dokładnie to, co mówi specyfikacja, i nic więcej.
+Ilustracja w Pythonie i pytest. W swoim projekcie używasz języka i narzędzia testów z profilu. Projekt i nazwy są zmyślone (ten sam przykład co w `SKILLS/tester_skill/przyklad.md`). Pokazuje, że test robi dokładnie to, co mówi specyfikacja, i nic więcej.
 
 Specyfikacja:
 

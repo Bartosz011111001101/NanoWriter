@@ -1,6 +1,6 @@
 # Konwencje projektu: NanoWriter
 
-Czytają je wykonawcy kodu i testów na starcie. Planner nie powtarza ich w promptach.
+Czytają je planner, tester i wykonawcy na starcie.
 
 ## Kod
 
