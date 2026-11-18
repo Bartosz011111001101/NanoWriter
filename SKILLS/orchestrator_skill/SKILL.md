@@ -37,18 +37,22 @@ Docs/
 
 ## Cykl zadania
 
-Kod nie czeka na testy. Kolejne fale kodu ruszają od razu, a testy, weryfikacja i poprawki dochodzą w tle i wracają do wykonawcy, który pisał dany kod. Wszystko, co może iść równolegle, odpalasz w jednej wiadomości.
+Kod nie czeka na testy ani na numer zadania. Prompt rusza, gdy to, z czego korzysta, jest napisane. Testy, weryfikacja i poprawki dochodzą w tle i wracają do wykonawcy, który pisał dany kod. Wszystko, co może iść równolegle, odpalasz w jednej wiadomości.
 
-1. **planner**: „Zaplanuj zadanie `NN-zadanie`. Cel: … Decyzje użytkownika: …”. Wraca lista fal z kolumną „Czeka na weryfikację”.
-2. **Start fali F** (kod), w jednej wiadomości:
-   - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” Tester pisze specyfikacje i sam odpala wykonawców testów.
-   - **wykonawca-kodu**, po jednym na każdy prompt fali: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej.
-   - Zapisz w `Docs/Postep/NN-zadanie/agenci.md` wiersz `PP-nazwa | model | id agenta`. Id jest potrzebne do poprawek, a po streszczeniu rozmowy znika z kontekstu.
-3. **Fala F+1 rusza, gdy kod fali F jest gotowy** (wszyscy wykonawcy fali F wrócili z „zrobione”). Nie czekasz na testy ani weryfikację fali F. Wyjątki, przy których czekasz na werdykt „gotowe” poprzedniej fali:
-   - w planie fala F+1 ma „Czeka na weryfikację: tak”;
-   - prompt fali F+1 zmienia plik, do którego czeka niewykonana poprawka.
-   Przed startem przeczytaj `Postep/NN-zadanie/kod/*` z poprzednich fal. Jeśli ktoś zgłosił odstępstwo od szkieletu, uwagi dla następnych fal albo opisał „Projekt” (prompt trudny), najpierw odpal plannera z prośbą o aktualizację promptów fali F+1.
-4. **Planner następnego zadania** rusza, gdy wszystkie prompty bieżącego zadania są napisane. Kod następnego zadania rusza na tych samych zasadach co fala F+1: po kodzie ostatniej fali bieżącego zadania.
+1. **Planowanie wszystkich zadań naraz.** Gdy znasz listę zadań (projekt, plan wstępny, kilka etapów do zrobienia), planujesz je wszystkie od razu, a nie zadanie po zadaniu:
+   - jeden **planner** dostaje wszystkie zadania, które jeszcze nie mają planu: „Zaplanuj naraz zadania `NN-a`, `NN-b`, … Cele: … Decyzje użytkownika: …”. Jeden agent pilnuje, żeby kontrakty się nie gryzły;
+   - drugi planner może iść równolegle tylko dla zadań, które zmieniają inne kontrakty niż pierwszy. W zleceniu wymień, których plików kontraktów i których folderów `Docs/` nie rusza;
+   - wraca lista promptów z kolumnami „Zależy od” (pełne nazwy `NN-zadanie/PP-nazwa`, także między zadaniami) i „Czeka na weryfikację”.
+2. **Kiedy prompt rusza.** Prompt kodu odpalasz, gdy spełnia wszystkie trzy warunki:
+   - każdy prompt z jego „Zależy od” ma kod „zrobione”, a jeśli jego fala ma „Czeka na weryfikację: tak”, to werdykt „gotowe” fali tych promptów;
+   - żaden pracujący agent nie zmienia jego plików i do jego plików nie czeka niewykonana poprawka;
+   - jeśli prompt korzysta z kodu, którego wykonawca zgłosił odstępstwo od szkieletu, uwagi dla następnych fal albo „Projekt” (prompt trudny), planner najpierw zaktualizował ten prompt.
+   Numer zadania i fali nie wstrzymuje promptu. Prompty różnych zadań idą równolegle.
+3. **Start prompów fali F zadania NN**, w jednej wiadomości z innymi gotowymi promptami:
+   - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” (raz na falę, przy pierwszym jej prompcie). Tester pisze specyfikacje i sam odpala wykonawców testów;
+   - **wykonawca-kodu**, po jednym na prompt: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej;
+   - zapisz w `Docs/Postep/NN-zadanie/agenci.md` wiersz `PP-nazwa | model | id agenta`. Id jest potrzebne do poprawek, a po streszczeniu rozmowy znika z kontekstu.
+4. Po każdym powrocie wykonawcy sprawdź punkt 2 dla wszystkich czekających promptów i odpal te, które mogą ruszyć.
 5. Wykonawca zgłosił „zablokowane”: odpal plannera z raportem, żeby poprawił prompt, potem jeszcze raz wykonawcę z tym samym modelem.
 6. **Weryfikacja fali F** rusza, gdy kod i testy fali F są gotowe (wrócili wykonawcy kodu fali F i tester SPEC fali F): **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.” Weryfikacje różnych fal mogą iść równolegle.
 7. Werdykt **gotowe**: commit (niżej).
@@ -105,7 +109,7 @@ Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi tes
 ## Commit
 
 - Jeden commit na falę z werdyktem „gotowe”, na gałęzi z sekcji „Git” profilu. Push tylko wtedy, gdy ta sekcja na to pozwala.
-- Fale commitujesz po kolei: fala F dopiero po commicie fali F−1.
+- Fale jednego zadania commitujesz po kolei: fala F dopiero po commicie fali F−1. Falę commitujesz dopiero wtedy, gdy są w commitach wszystkie prompty z „Zależy od” jej promptów, także z innych zadań.
 - Do commita fali F dodajesz (`git add <ścieżki>`) tylko pliki z „Plików” jej promptów i poprawek oraz jej pliki testów. Pliki późniejszych fal zostają poza commitem.
 - Jeśli plik fali F zmieniła już późniejsza, jeszcze niezweryfikowana fala, wstrzymaj commit fali F i zrób jeden wspólny commit obu fal po werdykcie „gotowe” tej późniejszej: `zadanie NN fale F–G: <co zrobiono>`.
 - Do commita trafiają też pułapki dopisane przez testera w `SKILLS/projekt/pulapki/`.

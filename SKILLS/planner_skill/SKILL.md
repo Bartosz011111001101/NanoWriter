@@ -59,6 +59,12 @@ Promptów testów nie piszesz, robi to tester. W każdym prompcie kodu zostawias
 - Gdy jeden plik dostaje w zadaniu więcej niż 3 prompty, zaproponuj podział tego pliku na mniejsze. Jeśli plik ma już kod, wpisz to do „Otwartych pytań”.
 - Najpierw najprostsza działająca wersja, optymalizacje w późniejszych falach.
 - Ostatnia fala zawiera test bramki z profilu, jeśli zadanie zamyka etap.
+- **Kilka zadań naraz.** Gdy zlecenie obejmuje kilka zadań, każde dostaje własny plan i prompty, a Ty pilnujesz zależności między nimi. Prompty różnych zadań ruszają równolegle, gdy tylko to, z czego korzystają, jest napisane, a numer zadania nikogo nie wstrzymuje. Dlatego:
+  - „Zależy od” wymienia każdy prompt, którego wynik jest potrzebny, także z innego zadania (`NN-zadanie/PP-nazwa`). Prompt bez zależności może ruszyć od razu;
+  - dwa prompty bez łańcucha zależności między sobą nie zmieniają tego samego pliku. Jeśli muszą, dodaj zależność;
+  - „Stan obecny” piszesz z kodu, a gdy kodu jeszcze nie ma, ze szkieletu promptu, który go tworzy;
+  - kontrakt modułu zmienia tylko jeden planner naraz. Pliki kontraktów, których zlecenie zabrania ruszać, czytasz, a potrzebną zmianę wpisujesz do „Otwartych pytań”;
+  - w odpowiedzi dajesz jedną wspólną tabelę wszystkich promptów: prompt, trudność, pliki, zależy od, czeka na weryfikację.
 - **Czeka na weryfikację.** Fala F+1 rusza zwykle, gdy kod fali F jest napisany, ale zanim przejdzie testy. Wpisz „tak” w kolumnie „Czeka na weryfikację”, gdy fala F+1 uruchamia na prawdziwo kod wcześniejszych fal (pobieranie danych, długi trening, test bramki na prawdziwych danych) albo opiera się na zachowaniu, którego szkielet i kontrakt nie ustalają. W innym przypadku wpisz „nie”. Fala 1 zadania ma „tak”, jeśli wymaga zweryfikowanego kodu poprzedniego zadania.
 
 ## Trudność
@@ -86,7 +92,7 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 
 - **Trudność:** łatwe | średnie | trudne
 - **Fala:** <F>
-- **Zależy od:** <PP-nazwa, ...> | brak
+- **Zależy od:** <PP-nazwa albo NN-zadanie/PP-nazwa z innego zadania, ...> | brak
 - **Pliki (tylko te wolno zmieniać):** <ścieżki>
 - **Kontrakt:** Docs/Kontrakty/<modul>.md
 
