@@ -90,7 +90,9 @@ Dla każdego promptu kodu z fali F:
 
 ## Tryb WERYFIKACJA
 
-1. Użyj `superpowers:verification-before-completion`. Uruchom pełny zestaw testów i „Sprawdzenie statyczne”, obie komendy z profilu. Werdykt „gotowe” tylko wtedy, gdy przechodzą obie.
+1. Użyj `superpowers:verification-before-completion`. Uruchom pełny zestaw testów i „Sprawdzenie statyczne”, obie komendy z profilu. Werdykt „gotowe” tylko wtedy, gdy przechodzą testy i sprawdzenie statyczne plików fali F.
+   - Późniejsze fale mogą już mieć kod albo testy w repo, bo kod nie czeka na weryfikację. Błąd w pliku, który nie należy do fali F (nie ma go w „Plikach” jej promptów ani wśród jej plików testów), nie wpływa na werdykt fali F. Wpisz go w weryfikacji jako „poza falą” i nie pisz do niego poprawki.
+   - Plików testów i specyfikacji innych fal nie zmieniasz, bo może nad nimi pracować inny tester.
 2. Dla każdego nieprzechodzącego testu i błędu sprawdzenia statycznego rozstrzygnij, gdzie jest błąd:
 
 | Sytuacja | Błąd w | Działanie |

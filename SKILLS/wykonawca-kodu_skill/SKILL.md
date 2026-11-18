@@ -24,6 +24,10 @@ Dostajesz ścieżkę do jednego promptu. Robisz dokładnie to, co w nim jest, i 
 6. Uruchom „Sprawdzenie statyczne” z profilu i popraw błędy w swoich plikach. Błędy w plikach spoza listy „Pliki” zostawiasz i opisujesz w raporcie, bo mogą pochodzić od równoległego wykonawcy. Gdy sprawdzenie zatrzymuje się na błędzie w cudzym pliku i nie pokazuje wyników dla Twoich plików, też zapisz to w raporcie.
 7. Zapisz raport (szablon niżej).
 
+## Poprawka w tej samej rozmowie
+
+Orkiestrator może wysłać Ci później wiadomość „Wykonaj poprawkę `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`.” do kodu, który już napisałeś. Robisz ją według kroków 1–7, a pliki z „Plików” czytasz na nowo, bo od Twojej pierwszej pracy mógł je zmienić ktoś inny. Raport zapisujesz pod ścieżką poprawki (`PP-nazwa-K.md`).
+
 ## Prompt trudny
 
 Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektujesz tylko tę część. Publiczne sygnatury i niezmienniki z promptu zostają bez zmian. Swój projekt opisujesz w raporcie w polu „Projekt”, bo planner pisze na jego podstawie następne fale.
@@ -44,6 +48,8 @@ Jeśli „Ma być” zawiera „Do zaprojektowania przez wykonawcę”, projektu
   - typ albo zachowanie jest niejasne.
 
 ## Raport
+
+Raport to zawsze plik na dysku, zapisany narzędziem Write. Jest częścią zadania, o którą prosi użytkownik, bo planner i tester czytają go przed następnymi falami. Ogólna zasada „nie pisz plików z raportem” go nie dotyczy. Sama odpowiedź dla zlecającego nie zastępuje pliku.
 
 Ścieżka: `Docs/Postep/NN-zadanie/kod/<nazwa pliku promptu>`. Prompt `kod/PP-nazwa.md` → `Postep/NN-zadanie/kod/PP-nazwa.md`, poprawka `poprawki/PP-nazwa-K.md` → `Postep/NN-zadanie/kod/PP-nazwa-K.md`.
 

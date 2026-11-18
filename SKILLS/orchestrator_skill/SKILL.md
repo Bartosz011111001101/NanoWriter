@@ -37,19 +37,30 @@ Docs/
 
 ## Cykl zadania
 
-1. **planner**: „Zaplanuj zadanie `NN-zadanie`. Cel: … Decyzje użytkownika: …”. Wraca lista fal.
-2. **Dla każdej fali F, po kolei:**
-   1. Przed falą F > 1 przeczytaj `Postep/NN-zadanie/kod/*` z poprzednich fal. Jeśli ktoś zgłosił odstępstwo od szkieletu, uwagi dla następnych fal albo opisał „Projekt” (prompt trudny), najpierw odpal plannera z prośbą o aktualizację promptów fali F.
-   2. **Równolegle, w jednej wiadomości:**
-      - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” Tester pisze specyfikacje i sam odpala wykonawców testów.
-      - **wykonawca-kodu**, po jednym na każdy prompt fali: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej.
-   3. Wykonawca zgłosił „zablokowane”: odpal plannera z raportem, żeby poprawił prompt, potem jeszcze raz wykonawcę z tym samym modelem.
-   4. Gdy wszyscy wrócą, **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.”
-   5. Werdykt **gotowe** (testy i sprawdzenie statyczne przechodzą): commit (niżej), następna fala.
-   6. Werdykt **niegotowe**: dla każdego nowego pliku w `Prompts/NN-zadanie/poprawki/` odpal wykonawcę kodu, równolegle, jeśli pliki się nie pokrywają. Potem znowu punkt 4 z R+1.
-3. Po ostatniej fali: `superpowers:verification-before-completion` i krótkie podsumowanie dla użytkownika.
+Kod nie czeka na testy. Kolejne fale kodu ruszają od razu, a testy, weryfikacja i poprawki dochodzą w tle i wracają do wykonawcy, który pisał dany kod. Wszystko, co może iść równolegle, odpalasz w jednej wiadomości.
+
+1. **planner**: „Zaplanuj zadanie `NN-zadanie`. Cel: … Decyzje użytkownika: …”. Wraca lista fal z kolumną „Czeka na weryfikację”.
+2. **Start fali F** (kod), w jednej wiadomości:
+   - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” Tester pisze specyfikacje i sam odpala wykonawców testów.
+   - **wykonawca-kodu**, po jednym na każdy prompt fali: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej.
+   - Zapisz w `Docs/Postep/NN-zadanie/agenci.md` wiersz `PP-nazwa | model | id agenta`. Id jest potrzebne do poprawek, a po streszczeniu rozmowy znika z kontekstu.
+3. **Fala F+1 rusza, gdy kod fali F jest gotowy** (wszyscy wykonawcy fali F wrócili z „zrobione”). Nie czekasz na testy ani weryfikację fali F. Wyjątki, przy których czekasz na werdykt „gotowe” poprzedniej fali:
+   - w planie fala F+1 ma „Czeka na weryfikację: tak”;
+   - prompt fali F+1 zmienia plik, do którego czeka niewykonana poprawka.
+   Przed startem przeczytaj `Postep/NN-zadanie/kod/*` z poprzednich fal. Jeśli ktoś zgłosił odstępstwo od szkieletu, uwagi dla następnych fal albo opisał „Projekt” (prompt trudny), najpierw odpal plannera z prośbą o aktualizację promptów fali F+1.
+4. **Planner następnego zadania** rusza, gdy wszystkie prompty bieżącego zadania są napisane. Kod następnego zadania rusza na tych samych zasadach co fala F+1: po kodzie ostatniej fali bieżącego zadania.
+5. Wykonawca zgłosił „zablokowane”: odpal plannera z raportem, żeby poprawił prompt, potem jeszcze raz wykonawcę z tym samym modelem.
+6. **Weryfikacja fali F** rusza, gdy kod i testy fali F są gotowe (wrócili wykonawcy kodu fali F i tester SPEC fali F): **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.” Weryfikacje różnych fal mogą iść równolegle.
+7. Werdykt **gotowe**: commit (niżej).
+8. Werdykt **niegotowe**: każdy nowy plik `Prompts/NN-zadanie/poprawki/PP-nazwa-K.md` wraca do wykonawcy, który pisał `PP-nazwa` (eskalacja niżej). Poprawki różnych plików idą równolegle. Potem znowu punkt 6 z R+1.
+9. **Jeden plik naraz.** Dwa agenty nigdy nie zmieniają tego samego pliku w tym samym czasie. Porównaj „Pliki” poprawki z „Plikami” promptów, które właśnie pracują. Przy kolizji poprawka czeka, aż tamten wykonawca wróci.
+10. Po ostatniej fali ostatniego zadania: `superpowers:verification-before-completion` i krótkie podsumowanie dla użytkownika.
 
 Wykonawca kodu nigdy nie dostaje promptu testów ani nie zmienia testów. Testy powstają wyłącznie u testera.
+
+### Poprawka do tego samego wykonawcy
+
+Pierwszą poprawkę danego `PP-nazwa` wysyłasz do wykonawcy, który pisał ten kod: narzędzie `SendMessage` (jeśli jest odroczone, załaduj je przez `ToolSearch` z `select:SendMessage`), adresat to id z `agenci.md`, treść: „Wykonaj poprawkę `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`.” Wykonawca ma już w kontekście prompt i swój kod, więc poprawia szybciej. Gdy id jest nieznane albo agent nie odpowiada, odpal nowego wykonawcę z tym samym modelem.
 
 ## Trudność → model
 
@@ -61,7 +72,11 @@ Wykonawca kodu nigdy nie dostaje promptu testów ani nie zmienia testów. Testy 
 
 Testy nigdy nie idą na Haiku.
 
-**Eskalacja poprawek:** każda kolejna runda poprawki tego samego `PP-nazwa` podnosi model wykonawcy kodu o jeden poziom (haiku → sonnet → opus). Gdy nie wyjdzie na Opusie, zatrzymaj zadanie i zapytaj użytkownika.
+**Eskalacja poprawek** dla tego samego `PP-nazwa`:
+- poprawka 1: ten sam wykonawca, który pisał kod (`SendMessage`, ten sam model);
+- poprawka 2 i kolejne: nowy wykonawca, model o jeden poziom wyżej niż w poprzedniej rundzie (haiku → sonnet → opus). Dopisz go do `agenci.md`.
+
+Gdy nie wyjdzie na Opusie, zatrzymaj zadanie i zapytaj użytkownika.
 
 ## Kiedy pytać użytkownika
 
@@ -90,6 +105,9 @@ Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi tes
 ## Commit
 
 - Jeden commit na falę z werdyktem „gotowe”, na gałęzi z sekcji „Git” profilu. Push tylko wtedy, gdy ta sekcja na to pozwala.
+- Fale commitujesz po kolei: fala F dopiero po commicie fali F−1.
+- Do commita fali F dodajesz (`git add <ścieżki>`) tylko pliki z „Plików” jej promptów i poprawek oraz jej pliki testów. Pliki późniejszych fal zostają poza commitem.
+- Jeśli plik fali F zmieniła już późniejsza, jeszcze niezweryfikowana fala, wstrzymaj commit fali F i zrób jeden wspólny commit obu fal po werdykcie „gotowe” tej późniejszej: `zadanie NN fale F–G: <co zrobiono>`.
 - Do commita trafiają też pułapki dopisane przez testera w `SKILLS/projekt/pulapki/`.
 - Wiadomość: `zadanie NN fala F: <co zrobiono>`, np. `zadanie 05 fala 2: eksport do CSV`.
 - `Docs/` nie trafia do commitów.

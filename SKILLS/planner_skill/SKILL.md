@@ -59,6 +59,7 @@ Promptów testów nie piszesz, robi to tester. W każdym prompcie kodu zostawias
 - Gdy jeden plik dostaje w zadaniu więcej niż 3 prompty, zaproponuj podział tego pliku na mniejsze. Jeśli plik ma już kod, wpisz to do „Otwartych pytań”.
 - Najpierw najprostsza działająca wersja, optymalizacje w późniejszych falach.
 - Ostatnia fala zawiera test bramki z profilu, jeśli zadanie zamyka etap.
+- **Czeka na weryfikację.** Fala F+1 rusza zwykle, gdy kod fali F jest napisany, ale zanim przejdzie testy. Wpisz „tak” w kolumnie „Czeka na weryfikację”, gdy fala F+1 uruchamia na prawdziwo kod wcześniejszych fal (pobieranie danych, długi trening, test bramki na prawdziwych danych) albo opiera się na zachowaniu, którego szkielet i kontrakt nie ustalają. W innym przypadku wpisz „nie”. Fala 1 zadania ma „tak”, jeśli wymaga zweryfikowanego kodu poprzedniego zadania.
 
 ## Trudność
 
@@ -137,9 +138,9 @@ Sekcje zawsze w tej kolejności i zawsze wszystkie, niezależnie od trudności. 
 <jedno zdanie>. Gotowe, gdy: <coś do uruchomienia i zobaczenia>.
 
 ## Fale
-| Fala | Prompt | Trudność | Pliki |
-| --- | --- | --- | --- |
-| <F> | <PP-nazwa> | łatwe / średnie / trudne | <ścieżki> |
+| Fala | Prompt | Trudność | Pliki | Czeka na weryfikację |
+| --- | --- | --- | --- | --- |
+| <F> | <PP-nazwa> | łatwe / średnie / trudne | <ścieżki> | tak / nie |
 
 ## Kontrakty
 - utworzone/zmienione: Docs/Kontrakty/<modul>.md
@@ -179,7 +180,7 @@ Sprawdź każdy punkt. Jeśli któryś nie przechodzi, popraw prompt:
 
 ## Odpowiedź dla orkiestratora
 
-1. Ścieżka planu i lista fal (numer fali, nazwy promptów, trudności).
+1. Ścieżka planu i lista fal (numer fali, nazwy promptów, trudności, czeka na weryfikację).
 2. Utworzone i zmienione kontrakty.
 3. Otwarte pytania albo „brak”.
 
