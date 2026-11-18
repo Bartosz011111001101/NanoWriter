@@ -15,3 +15,4 @@ Format: **Obszar.** Objaw → przyczyna → jak uniknąć.
 - **Import cykliczny.** `ImportError: cannot import name` przy imporcie modułu → dwa moduły importują się nawzajem na górze pliku → zależność w jedną stronę, wspólne typy w osobnym module.
 - **Dziedziczenie.** Pole klasy bazowej nie istnieje w podklasie → brak `super().__init__(...)` w konstruktorze podklasy → wywołaj go jako pierwszą instrukcję.
 - **Kolejność słownika.** Wynik różni się od przykładu kolejnością → kod opiera się na kolejności iteracji po `set` → sortuj albo używaj `dict` lub `list`, gdy kolejność ma znaczenie.
+- **Długość linii w opisach funkcji.** `ruff check` zgłasza E501 w docstringu albo komentarzu, choć ciało funkcji jest czyste → przykład wywołania albo zdanie w opisie funkcji ze szkieletu dłuższe niż `line-length` (tu 100), a wykonawca nie zmienia opisów funkcji → już w szkielecie zawijaj opisy i przykłady do 100 znaków (przykład z wieloma argumentami rozbij na kilka linii z wcięciem).
