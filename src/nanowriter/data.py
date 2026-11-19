@@ -1,5 +1,6 @@
 """Pobieranie, czyszczenie i podział tekstu książek z Wolnych Lektur."""
 
+import hashlib
 import json
 import random
 import re
@@ -7,7 +8,7 @@ import time
 import unicodedata
 import urllib.request
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 WOLNELEKTURY_API = "https://wolnelektury.pl/api/books/"
@@ -269,6 +270,192 @@ def is_translation(raw: str) -> bool:
     )
 
 
+@dataclass
+class CorpusReport:
+    """Wynik budowy korpusu: przyjęte książki, rozmiar czystego tekstu, pominięte i powód.
+
+    Przykład: CorpusReport() -> books=[], clean_bytes=0, skipped={}, limit_reached=False
+    """
+
+    books: list[str] = field(default_factory=list)
+    clean_bytes: int = 0
+    skipped: dict[str, str] = field(default_factory=dict)
+    limit_reached: bool = False
+
+
+def build_corpus(
+    entries: list[BookEntry],
+    raw_dir: Path,
+    clean_dir: Path,
+    target_bytes: int,
+    *,
+    include_translations: bool = False,
+    fetch: Callable[[str], bytes] | None = None,
+    on_book: Callable[[str, str], None] | None = None,
+) -> CorpusReport:
+    """Pobiera i czyści książki po kolei, aż czysty tekst osiągnie target_bytes, i zwraca raport.
+
+    Przykład: wpisy a, b, c (każda książka po czyszczeniu ma 750 bajtów), target_bytes=1000
+        -> books=["a", "b"], clean_bytes=1500, c nie jest pobierana; pliki clean_dir/a.txt, b.txt
+    Przykład: książka bez pliku .txt (download_book -> ValueError) -> skipped[slug] == "brak-txt"
+    Przykład: nagłówek z "tłum. X", include_translations=False -> skipped[slug] == "tlumaczenie"
+    Przykład: fetch rzuca DownloadLimitError -> limit_reached=True, dalsze wpisy pominięte
+    Przykład: target_bytes=0 -> ValueError
+    """
+    if target_bytes <= 0:
+        raise ValueError(f"Cel rozmiaru musi być dodatni: {target_bytes}")
+
+    report = CorpusReport()
+    seen_hashes: set[str] = set()
+
+    def skip(slug: str, reason: str) -> None:
+        report.skipped[slug] = reason
+        if on_book is not None:
+            on_book(slug, reason)
+
+    for entry in entries:
+        if report.clean_bytes >= target_bytes:
+            break
+        slug = entry.slug
+
+        try:
+            raw_path = download_book(slug, raw_dir, fetch)
+        except DownloadLimitError:
+            report.limit_reached = True
+            if on_book is not None:
+                on_book(slug, "limit")
+            break
+        except ValueError:
+            skip(slug, "brak-txt")
+            continue
+        except OSError:
+            skip(slug, "blad-sieci")
+            continue
+
+        raw = load_text(raw_path)
+        if not include_translations and is_translation(raw):
+            skip(slug, "tlumaczenie")
+            continue
+
+        text = clean_text(raw)
+        if text == "":
+            skip(slug, "pusty")
+            continue
+
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        if digest in seen_hashes:
+            skip(slug, "duplikat")
+            continue
+
+        clean_dir.mkdir(parents=True, exist_ok=True)
+        (clean_dir / f"{slug}.txt").write_text(text, encoding="utf-8", newline="\n")
+        seen_hashes.add(digest)
+        report.books.append(slug)
+        report.clean_bytes += len(text.encode("utf-8"))
+        if on_book is not None:
+            on_book(slug, "ok")
+
+    return report
+
+
+def split_books(
+    sizes: dict[str, int], val_fraction: float = 0.1, seed: int = 0
+) -> tuple[list[str], list[str]]:
+    """Dzieli książki (slug -> rozmiar w bajtach) na (train, val) według potasowanej kolejności.
+
+    Przykład: {"a": 100, ..., "j": 100} (10 książek), 0.1, seed=0
+        -> (["a", ..., "g", "i", "j"], ["h"])
+    Przykład: {"a": 50, "b": 950}, 0.1, seed=0 -> (["b"], ["a"])
+    Przykład: {"a": 10, "b": 10, "c": 10}, 0.5, seed=0 -> (["b"], ["a", "c"])
+    Przykład: {"a": 10} -> ValueError; val_fraction 0 albo 1 -> ValueError; rozmiar 0 -> ValueError
+    """
+    if len(sizes) < 2:
+        raise ValueError(f"Do podziału potrzeba co najmniej 2 książek: {len(sizes)}")
+    if not 0 < val_fraction < 1:
+        raise ValueError(f"Udział walidacji musi być w przedziale (0, 1): {val_fraction}")
+    if any(size <= 0 for size in sizes.values()):
+        raise ValueError("Rozmiar każdej książki musi być dodatni")
+
+    order = sorted(sizes)
+    random.Random(seed).shuffle(order)
+
+    threshold = val_fraction * sum(sizes.values())
+    max_val_count = len(order) - 1
+    val: list[str] = []
+    val_bytes = 0
+    for slug in order:
+        if not (val_bytes < threshold and len(val) < max_val_count):
+            break
+        val.append(slug)
+        val_bytes += sizes[slug]
+
+    val_set = set(val)
+    train = [slug for slug in sizes if slug not in val_set]
+    return sorted(train), sorted(val)
+
+
+@dataclass
+class SplitResult:
+    """Wynik podziału: slugi obu części, ścieżki plików i ich długość w znakach.
+
+    Przykład: SplitResult(train=["a"], val=["b"], train_path=p, val_path=q, train_chars=751,
+        val_chars=751)
+    """
+
+    train: list[str]
+    val: list[str]
+    train_path: Path
+    val_path: Path
+    train_chars: int
+    val_chars: int
+
+
+def split_corpus(
+    clean_dir: Path,
+    books: list[str],
+    out_dir: Path,
+    val_fraction: float = 0.1,
+    seed: int = 0,
+) -> SplitResult:
+    """Dzieli czyste książki na train/val i zapisuje train.txt, val.txt i split.json w out_dir.
+
+    Przykład: clean_dir z a, b, c, d (po 750 znaków ASCII), books=["c", "a", "b", "d"], seed=0
+        -> train=["a", "b", "d"], val=["c"], train_chars=2255, val_chars=751
+    Przykład: books z powtórzonym slugiem -> ValueError
+    Przykład: books=["a"] -> ValueError
+    """
+    if len(set(books)) != len(books):
+        raise ValueError(f"Powtórzony slug książki: {books}")
+
+    sizes = {slug: (clean_dir / f"{slug}.txt").stat().st_size for slug in books}
+    train, val = split_books(sizes, val_fraction, seed)
+
+    train_text = _join_books(clean_dir, train)
+    val_text = _join_books(clean_dir, val)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    train_path = out_dir / "train.txt"
+    val_path = out_dir / "val.txt"
+    train_path.write_text(train_text, encoding="utf-8", newline="\n")
+    val_path.write_text(val_text, encoding="utf-8", newline="\n")
+
+    payload = {"seed": seed, "val_fraction": val_fraction, "train": train, "val": val}
+    (out_dir / "split.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    return SplitResult(
+        train=train,
+        val=val,
+        train_path=train_path,
+        val_path=val_path,
+        train_chars=len(train_text),
+        val_chars=len(val_text),
+    )
+
+
 def _fetch_url(url: str) -> bytes:
     """Pobiera zawartość adresu HTTP(S) i zwraca ją jako bajty.
 
@@ -350,3 +537,13 @@ def _header_end(lines: list[str]) -> int:
         if line.lstrip().startswith("ISBN"):
             return index + 1
     return 0
+
+
+def _join_books(clean_dir: Path, slugs: list[str]) -> str:
+    """Łączy czyste teksty książek w kolejności slugów przez pustą linię i kończy \\n.
+
+    Przykład: a="Ala", b="Ma" w clean_dir, ["a", "b"] -> "Ala\\n\\nMa\\n"
+    Przykład: [] -> "\\n"
+    """
+    parts = [load_text(clean_dir / f"{slug}.txt") for slug in slugs]
+    return "\n\n".join(parts) + "\n"
