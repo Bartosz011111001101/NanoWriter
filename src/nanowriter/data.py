@@ -1,12 +1,24 @@
-"""Pobieranie i wczytywanie tekstu książek z Wolnych Lektur."""
+"""Pobieranie, czyszczenie i podział tekstu książek z Wolnych Lektur."""
 
 import json
+import random
 import re
+import time
+import unicodedata
 import urllib.request
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 WOLNELEKTURY_API = "https://wolnelektury.pl/api/books/"
+WOLNELEKTURY_CATALOG = "https://wolnelektury.pl/api/epochs/"
+PROSE_EPOCHS: tuple[str, ...] = (
+    "pozytywizm",
+    "modernizm",
+    "mloda-polska-modernizm",
+    "dwudziestolecie-miedzywojenne",
+)
+PROSE_GENRES: tuple[str, ...] = ("powieść", "nowela", "opowiadanie")
 
 
 def book_api_url(slug: str) -> str:
@@ -64,6 +76,199 @@ def load_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+@dataclass(frozen=True)
+class BookEntry:
+    """Pozycja katalogu Wolnych Lektur.
+
+    Przykład: BookEntry("a", "Lalka", "Bolesław Prus", "Powieść", "Pozytywizm").slug -> "a"
+    """
+
+    slug: str
+    title: str
+    author: str
+    genre: str
+    epoch: str
+
+
+def catalog_api_url(epoch: str, kind: str = "epika") -> str:
+    """Zwraca adres API z listą książek danej epoki i rodzaju literackiego.
+
+    Przykład: "pozytywizm" -> "https://wolnelektury.pl/api/epochs/pozytywizm/kinds/epika/books/"
+    Przykład: ("modernizm", "liryka") ->
+        "https://wolnelektury.pl/api/epochs/modernizm/kinds/liryka/books/"
+    Przykład: "Młoda Polska" albo "" -> ValueError
+    Przykład: ("pozytywizm", "") -> ValueError
+    """
+    for name, value in (("epoka", epoch), ("rodzaj", kind)):
+        if re.fullmatch(r"[a-z0-9-]+", value) is None:
+            raise ValueError(f"Niepoprawna {name} katalogu: {value!r}")
+    return WOLNELEKTURY_CATALOG + epoch + "/kinds/" + kind + "/books/"
+
+
+def list_books(
+    epoch: str, fetch: Callable[[str], bytes] | None = None, kind: str = "epika"
+) -> list[BookEntry]:
+    """Pobiera katalog książek epoki i rodzaju i zwraca jego pozycje w kolejności z API.
+
+    Przykład: fetch(catalog_api_url("pozytywizm")) -> b'[{"slug": "a", "title": "A",
+        "author": "X", "genre": "Nowela", "epoch": "Pozytywizm"}]'
+        -> [BookEntry("a", "A", "X", "Nowela", "Pozytywizm")]
+    Przykład: element {"slug": "b"} -> BookEntry("b", "", "", "", "")
+    Przykład: element bez "slug", ze slugiem "Zły slug", ze slugiem 5 albo nie-obiekt -> pominięty
+    Przykład: odpowiedź b'[]' -> []
+    Przykład: odpowiedź b'{"detail": "Nie znaleziono."}' -> ValueError
+    """
+    url = catalog_api_url(epoch, kind)
+    if fetch is None:
+        fetch = _fetch_url
+
+    data = json.loads(fetch(url))
+    if not isinstance(data, list):
+        raise ValueError(f"Odpowiedź katalogu nie jest listą: {url}")
+
+    entries: list[BookEntry] = []
+    for item in data:
+        if not isinstance(item, dict) or not _is_slug(item.get("slug")):
+            continue
+        entries.append(
+            BookEntry(
+                item["slug"],
+                _text_field(item, "title"),
+                _text_field(item, "author"),
+                _text_field(item, "genre"),
+                _text_field(item, "epoch"),
+            )
+        )
+    return entries
+
+
+def select_books(
+    entries: list[BookEntry], genres: tuple[str, ...] = PROSE_GENRES, seed: int = 0
+) -> list[BookEntry]:
+    """Wybiera pozycje o gatunku z genres, bez powtórzonych slugów, w kolejności tasowanej seedem.
+
+    Przykład: (slug, genre) = (c, "Nowela"), (a, "Powieść"), (b, "Bajka"),
+        (e, "powieść historyczna"), seed=0 -> slugi ["a", "e", "c"]
+    Przykład: genre "Esej, Nowela" -> wybrana (pasuje druga część)
+    Przykład: genre "Poemat prozą" -> pominięta (pierwsze słowo "poemat")
+    Przykład: dwie pozycje ze slugiem "a" -> tylko pierwsza z wejścia
+    Przykład: [] -> []
+    """
+    allowed = {_normalize(genre) for genre in genres}
+
+    seen: set[str] = set()
+    chosen: list[BookEntry] = []
+    for entry in entries:
+        if entry.slug in seen or not _genre_matches(entry.genre, allowed):
+            continue
+        seen.add(entry.slug)
+        chosen.append(entry)
+
+    chosen.sort(key=lambda entry: entry.slug)
+    random.Random(seed).shuffle(chosen)
+    return chosen
+
+
+class DownloadLimitError(RuntimeError):
+    """Limit bajtów pobierania został wyczerpany, kolejne pobranie się nie odbyło."""
+
+
+class LimitedFetch:
+    """Pobieranie url -> bytes z limitem bajtów i pauzą przed każdym pobraniem oprócz pierwszego.
+
+    Przykład: f = LimitedFetch(10, pause=0.5, fetch=g, sleep=s), g zawsze zwraca b"123456":
+        f("u1") -> b"123456", s niewywołane, f.used == 6
+        f("u2") -> s(0.5), potem b"123456", f.used == 12
+        f("u3") -> DownloadLimitError (12 >= 10), g i s niewywołane, f.used == 12
+    Przykład: LimitedFetch(0) -> ValueError; LimitedFetch(10, pause=-1) -> ValueError
+    """
+
+    def __init__(
+        self,
+        max_bytes: int,
+        pause: float = 0.5,
+        fetch: Callable[[str], bytes] | None = None,
+        sleep: Callable[[float], None] | None = None,
+    ) -> None:
+        if max_bytes <= 0:
+            raise ValueError(f"Limit bajtów musi być dodatni: {max_bytes}")
+        if pause < 0:
+            raise ValueError(f"Pauza nie może być ujemna: {pause}")
+        self._max_bytes = max_bytes
+        self._pause = pause
+        self._fetch = fetch
+        self._sleep = sleep
+        self._used = 0
+        self._started = 0
+
+    @property
+    def used(self) -> int:
+        """Zwraca liczbę bajtów pobranych dotąd przez ten obiekt.
+
+        Przykład: zaraz po utworzeniu -> 0
+        """
+        return self._used
+
+    def __call__(self, url: str) -> bytes:
+        """Pobiera url z pilnowaniem limitu i pauzy i zwraca bajty odpowiedzi.
+
+        Przykład: patrz opis klasy
+        """
+        if self._used >= self._max_bytes:
+            raise DownloadLimitError(
+                f"Wyczerpano limit {self._max_bytes} bajtów, pominięto: {url}"
+            )
+
+        if self._started > 0 and self._pause > 0:
+            sleep = self._sleep if self._sleep is not None else time.sleep
+            sleep(self._pause)
+        self._started += 1
+
+        fetch = self._fetch if self._fetch is not None else _fetch_url
+        body = fetch(url)
+        self._used += len(body)
+        return body
+
+
+def clean_text(raw: str) -> str:
+    """Czyści tekst książki z Wolnych Lektur: nagłówek, stopka, znaczniki, NFC, białe znaki.
+
+    Przykład: "Autor\\n\\nTytuł\\n\\nISBN 1\\n\\n\\nAla  ma\\tkota.\\n\\n\\n\\n"
+        "Kot *ma* Alę[1].\\n\\n-----\\nStopka\\n" -> "Ala ma kota.\\n\\nKot ma Alę."
+    Przykład: "Ala\\r\\nma\\r\\n" -> "Ala\\nma"
+    Przykład: "Cafe\\u0301" -> "Café" (NFC)
+    Przykład: "Pan ***  przyszedł" -> "Pan przyszedł"
+    Przykład: "Ala\\u00a0ma 😀" -> "Ala ma 😀"
+    Przykład: "" -> ""; "\\n\\t \\n" -> ""
+    """
+    lines = _split_lines(raw)
+    lines = lines[_header_end(lines) :]
+
+    text = "\n".join(lines)
+    text = re.sub(r"\[[0-9]+\]", "", text)
+    text = text.replace("*", "")
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = "\n".join(line.strip(" ") for line in text.split("\n"))
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip(" \n")
+
+
+def is_translation(raw: str) -> bool:
+    """Mówi, czy nagłówek książki ma linię tłumacza ("tłum. …" albo "przeł. …").
+
+    Przykład: "Anton Czechow\\n\\nAptekarzowa\\ntłum. A. W.\\n\\nISBN 978\\n\\n\\nTekst" -> True
+    Przykład: "Eliza Orzeszkowa\\n\\nDobra pani\\n\\nISBN 978\\n\\n\\nTekst" -> False
+    Przykład: "Autor\\nPRZEŁ. X\\nISBN 1\\n\\nTekst" -> True
+    Przykład: "Autor\\n\\nISBN 1\\n\\ntłum. w treści" -> False (linia po ISBN to treść)
+    Przykład: "tłum. bez nagłówka" -> False (brak linii ISBN, więc brak nagłówka)
+    """
+    lines = _split_lines(raw)
+    header = lines[: _header_end(lines)]
+    return any(
+        line.strip().lower().startswith(("tłum.", "przeł.")) for line in header
+    )
+
+
 def _fetch_url(url: str) -> bytes:
     """Pobiera zawartość adresu HTTP(S) i zwraca ją jako bajty.
 
@@ -73,3 +278,75 @@ def _fetch_url(url: str) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": "nanowriter/0.1"})
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read()
+
+
+def _is_slug(value: object) -> bool:
+    """Mówi, czy wartość jest napisem pasującym w całości do wzorca slugu.
+
+    Przykład: "a-1" -> True
+    Przykład: "Zły slug" albo 5 -> False
+    """
+    return isinstance(value, str) and re.fullmatch(r"[a-z0-9-]+", value) is not None
+
+
+def _text_field(item: dict[str, object], key: str) -> str:
+    """Zwraca pole tekstowe pozycji katalogu albo pusty napis, gdy pole nie jest napisem.
+
+    Przykład: {"title": "A"}, "title" -> "A"
+    Przykład: {}, "title" -> ""
+    """
+    value = item.get(key)
+    return value if isinstance(value, str) else ""
+
+
+def _normalize(text: str) -> str:
+    """Normalizuje napis do NFC i małych liter, do porównań gatunków.
+
+    Przykład: "Powieść" -> "powieść"
+    Przykład: "Cafe\\u0301" -> "café"
+    """
+    return unicodedata.normalize("NFC", text).lower()
+
+
+def _genre_matches(genre: str, allowed: set[str]) -> bool:
+    """Mówi, czy któraś część gatunku (po przecinku) zaczyna się od dozwolonego słowa.
+
+    Przykład: "Esej, Nowela", {"nowela"} -> True
+    Przykład: "Poemat prozą", {"nowela"} -> False
+    Przykład: "", {"nowela"} -> False
+    """
+    for part in _normalize(genre).split(","):
+        words = part.split()
+        if words and words[0] in allowed:
+            return True
+    return False
+
+
+def _split_lines(raw: str) -> list[str]:
+    """Ujednolica tekst (końce linii, znaki niewidoczne, NFC) i usuwa stopkę od linii -----.
+
+    Przykład: "A\\r\\nB\\n-----\\nC" -> ["A", "B"]
+    Przykład: "" -> []
+    """
+    text = raw.replace("\r\n", "\n").replace("\r", "\n")
+    for invisible in ("﻿", "­", "​"):
+        text = text.replace(invisible, "")
+    text = unicodedata.normalize("NFC", text)
+
+    lines = text.split("\n") if text else []
+    for index in range(len(lines) - 1, -1, -1):
+        if lines[index].rstrip() == "-----":
+            return lines[:index]
+    return lines
+
+
+def _header_end(lines: list[str]) -> int:
+    """Zwraca liczbę linii nagłówka (do linii ISBN włącznie) albo 0, gdy go nie ma.
+
+    Przykład: ["Autor", "", "ISBN 1", "Tekst"] -> 3
+    Przykład: ["Autor", "Tekst"] -> 0
+    """
+    for index, line in enumerate(lines[:20]):
+        if line.lstrip().startswith("ISBN"):
+            return index + 1
+    return 0
