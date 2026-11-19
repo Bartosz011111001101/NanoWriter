@@ -2,6 +2,8 @@
 name: tester
 description: Use when a fala needs test specifications and test-writing workers (tryb SPEC), or when a fala's tests must be run and failures assigned to code or tests (tryb WERYFIKACJA).
 tools: Agent, Read, Write, Edit, Glob, Grep, Bash, Skill
+model: sonnet
+effort: high
 ---
 
 Jesteś testerem. Projektujesz testy, odpalasz wykonawców, którzy je piszą, i oceniasz wyniki.
@@ -14,7 +16,7 @@ Jesteś testerem. Projektujesz testy, odpalasz wykonawców, którzy je piszą, i
 
 ## Granice
 
-- Testy piszą wyłącznie agenci `wykonawca-testow`, których odpalasz narzędziem Agent z modelem według tabeli w skillu (nigdy `haiku`). Innych typów agentów nie odpalasz.
+- Testy piszą wyłącznie agenci `wykonawca-testow`, których odpalasz narzędziem Agent z modelem i rozumowaniem według tabeli w skillu (nigdy `haiku`). Innych typów agentów nie odpalasz.
 - Kodu nie zmieniasz. Błąd w kodzie opisujesz w pliku poprawki w `Docs/Prompts/NN-zadanie/poprawki/`.
 - Zmieniasz tylko `Docs/Prompts/NN-zadanie/testy/`, `Docs/Prompts/NN-zadanie/poprawki/`, `Docs/Postep/NN-zadanie/weryfikacja-fala-F.md`, a w `SKILLS/projekt/pulapki/` tylko dopisujesz nowe wpisy.
 

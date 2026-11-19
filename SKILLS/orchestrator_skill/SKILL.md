@@ -40,8 +40,9 @@ Docs/
 Kod nie czeka na testy ani na numer zadania. Prompt rusza, gdy to, z czego korzysta, jest napisane. Testy, weryfikacja i poprawki dochodzą w tle i wracają do wykonawcy, który pisał dany kod. Wszystko, co może iść równolegle, odpalasz w jednej wiadomości.
 
 1. **Planowanie wszystkich zadań naraz.** Gdy znasz listę zadań (projekt, plan wstępny, kilka etapów do zrobienia), planujesz je wszystkie od razu, a nie zadanie po zadaniu:
-   - jeden **planner** dostaje wszystkie zadania, które jeszcze nie mają planu: „Zaplanuj naraz zadania `NN-a`, `NN-b`, … Cele: … Decyzje użytkownika: …”. Jeden agent pilnuje, żeby kontrakty się nie gryzły;
-   - drugi planner może iść równolegle tylko dla zadań, które zmieniają inne kontrakty niż pierwszy. W zleceniu wymień, których plików kontraktów i których folderów `Docs/` nie rusza;
+   - **plannerzy idą równolegle, po jednym na zadanie**, w jednej wiadomości: „Zaplanuj zadanie `NN-a`. Cel: … Decyzje użytkownika: … Twoje kontrakty: … Nie ruszasz: …”;
+   - każdy kontrakt ma jednego właściciela. Zadania, które zmieniają ten sam kontrakt, dostaje ten sam planner w jednym zleceniu („Zaplanuj naraz zadania `NN-a`, `NN-b`”). W każdym zleceniu wymień kontrakty, które planner zmienia, i te, które tylko czyta, bo planują je inni;
+   - planner zadania, które korzysta z kontraktu innego plannera, opiera się na obecnym kontrakcie i opisie celu tamtego zadania. Gdy potrzebuje w nim zmiany, wpisuje ją do „Otwartych pytań”, a Ty przekazujesz ją właścicielowi kontraktu;
    - wraca lista promptów z kolumnami „Zależy od” (pełne nazwy `NN-zadanie/PP-nazwa`, także między zadaniami) i „Czeka na weryfikację”.
 2. **Kiedy prompt rusza.** Prompt kodu odpalasz, gdy spełnia wszystkie trzy warunki:
    - każdy prompt z jego „Zależy od” ma kod „zrobione”, a jeśli jego fala ma „Czeka na weryfikację: tak”, to werdykt „gotowe” fali tych promptów;
@@ -51,12 +52,12 @@ Kod nie czeka na testy ani na numer zadania. Prompt rusza, gdy to, z czego korzy
 3. **Start prompów fali F zadania NN**, w jednej wiadomości z innymi gotowymi promptami:
    - **tester**: „Tryb SPEC. Zadanie `NN-zadanie`, fala F.” (raz na falę, przy pierwszym jej prompcie). Tester pisze specyfikacje i sam odpala wykonawców testów;
    - **wykonawca-kodu**, po jednym na prompt: „Wykonaj `Docs/Prompts/NN-zadanie/kod/PP-nazwa.md`.” Model według tabeli niżej;
-   - zapisz w `Docs/Postep/NN-zadanie/agenci.md` wiersz `PP-nazwa | model | id agenta`. Id jest potrzebne do poprawek, a po streszczeniu rozmowy znika z kontekstu.
+   - zapisz w `Docs/Postep/NN-zadanie/agenci.md` wiersz `PP-nazwa | model | rozumowanie | id agenta`. Id jest potrzebne do poprawek, a po streszczeniu rozmowy znika z kontekstu.
 4. Po każdym powrocie wykonawcy sprawdź punkt 2 dla wszystkich czekających promptów i odpal te, które mogą ruszyć.
 5. Wykonawca zgłosił „zablokowane”: odpal plannera z raportem, żeby poprawił prompt, potem jeszcze raz wykonawcę z tym samym modelem.
 6. **Weryfikacja fali F** rusza, gdy kod i testy fali F są gotowe (wrócili wykonawcy kodu fali F i tester SPEC fali F): **tester**: „Tryb WERYFIKACJA. Zadanie `NN-zadanie`, fala F, runda R.” Weryfikacje różnych fal mogą iść równolegle.
 7. Werdykt **gotowe**: commit (niżej).
-8. Werdykt **niegotowe**: każdy nowy plik `Prompts/NN-zadanie/poprawki/PP-nazwa-K.md` wraca do wykonawcy, który pisał `PP-nazwa` (eskalacja niżej). Poprawki różnych plików idą równolegle. Potem znowu punkt 6 z R+1.
+8. Werdykt **niegotowe**: każdy nowy plik `Prompts/NN-zadanie/poprawki/PP-nazwa-K.md` wraca do wykonawcy, który pisał `PP-nazwa` (drabinka eskalacji niżej). Poprawki różnych plików idą równolegle. Potem znowu punkt 6 z R+1.
 9. **Jeden plik naraz.** Dwa agenty nigdy nie zmieniają tego samego pliku w tym samym czasie. Porównaj „Pliki” poprawki z „Plikami” promptów, które właśnie pracują. Przy kolizji poprawka czeka, aż tamten wykonawca wróci.
 10. Po ostatniej fali ostatniego zadania: `superpowers:verification-before-completion` i krótkie podsumowanie dla użytkownika.
 
@@ -66,28 +67,40 @@ Wykonawca kodu nigdy nie dostaje promptu testów ani nie zmienia testów. Testy 
 
 Pierwszą poprawkę danego `PP-nazwa` wysyłasz do wykonawcy, który pisał ten kod: narzędzie `SendMessage` (jeśli jest odroczone, załaduj je przez `ToolSearch` z `select:SendMessage`), adresat to id z `agenci.md`, treść: „Wykonaj poprawkę `Docs/Prompts/NN-zadanie/poprawki/PP-nazwa-K.md`.” Wykonawca ma już w kontekście prompt i swój kod, więc poprawia szybciej. Gdy id jest nieznane albo agent nie odpowiada, odpal nowego wykonawcę z tym samym modelem.
 
-## Trudność → model
+## Modele i rozumowanie
 
-| Trudność w nagłówku promptu | Wykonawca kodu (odpalasz Ty) | Wykonawca testów (odpala tester) |
-| --- | --- | --- |
-| łatwe | `haiku` | `sonnet` |
-| średnie | `sonnet` | `sonnet` |
-| trudne | `opus` | `opus` |
+Opus pracuje domyślnie tylko w głównej sesji. Agenci domyślnie pracują najwyżej na Sonnecie, a Opus wchodzi pojedynczo, dopiero na szczeblu eskalacji albo gdy użytkownik o to poprosi (np. „planner na Opusie”). Prośba użytkownika przeskakuje drabinkę.
+
+Każde zlecenie przez narzędzie Agent ma jawnie podane `model` i `effort` z tabeli albo z drabinki. To jest instrukcja ustawienia rozumowania dla każdego agenta.
+
+| Agent | Domyślnie: model, rozumowanie |
+| --- | --- |
+| planner | `sonnet`, `high` |
+| tester (SPEC i WERYFIKACJA) | `sonnet`, `high` |
+| wykonawca kodu, prompt łatwy | `haiku`, `high` |
+| wykonawca kodu, prompt średni albo trudny | `sonnet`, `high` |
+| wykonawca testów (odpala tester) | `sonnet`, `high` |
 
 Testy nigdy nie idą na Haiku.
 
-**Eskalacja poprawek** dla tego samego `PP-nazwa`:
-- poprawka 1: ten sam wykonawca, który pisał kod (`SendMessage`, ten sam model);
-- poprawka 2 i kolejne: nowy wykonawca, model o jeden poziom wyżej niż w poprzedniej rundzie (haiku → sonnet → opus). Dopisz go do `agenci.md`.
+**Drabinka eskalacji.** Każdy szczebel wchodzi dopiero po porażce poprzedniego. Opus zaczyna od `medium`, bo prompty są pocięte na małe kawałki i zwykle to wystarcza. Opus `high` dopiero wtedy, gdy Opus `medium` nie dał rady.
 
-Gdy nie wyjdzie na Opusie, zatrzymaj zadanie i zapytaj użytkownika.
+| Kto | Szczeble |
+| --- | --- |
+| wykonawca kodu, łatwe | Haiku high → poprawka 1: ten sam wykonawca (`SendMessage`) → Sonnet high → Opus medium → Opus high → pytasz użytkownika |
+| wykonawca kodu, średnie i trudne | Sonnet high → poprawka 1: ten sam wykonawca (`SendMessage`) → Opus medium → Opus high → pytasz użytkownika |
+| wykonawca testów | Sonnet high → Opus medium → Opus high → pytasz użytkownika (prowadzi tester) |
+| planner | Sonnet high → gdy wykonawca dwa razy zgłosi „zablokowane” na tym samym prompcie: Opus medium → Opus high → pytasz użytkownika |
+| tester | Sonnet high → gdy nie rozstrzyga, gdzie jest błąd, albo dwie rundy poprawek tego samego `PP-nazwa` nic nie dają: Opus medium → Opus high → pytasz użytkownika |
+
+Poprawkę wykonawcy kodu na kolejnym szczeblu robi nowy wykonawca. Dopisz go do `agenci.md` z modelem i rozumowaniem.
 
 ## Kiedy pytać użytkownika
 
 - Decyzje użytkownika wymienione w profilu.
 - Operacje z sekcji „Ograniczenia” w profilu.
 - Zmiana kontraktu, który ma już kod i testy.
-- Gdy poprawka nie wychodzi nawet na Opusie.
+- Gdy coś nie wychodzi nawet na Opusie `high` (koniec drabinki).
 - Gdy planner zwróci „Otwarte pytania” inne niż „brak”.
 
 ## Bramki etapów
@@ -104,7 +117,7 @@ Zadanie odpowiadające etapowi jest zamknięte dopiero wtedy, gdy przechodzi tes
 | Narzędzia sprawdzenia statycznego | instalujesz narzędzia, które łapią: nieużywany kod i podwójne definicje, cykle zależności, skopiowane bloki, a w projekcie z warstwami także import z wyższej warstwy. Komendy i pliki konfiguracji wpisujesz do profilu. Przykład dla Pythona: ruff, import-linter, pylint. |
 | `CLAUDE.md` | kopiujesz bez zmian. Zawiera trzy importy: `@.claude/agents/orchestrator.md`, `@SKILLS/orchestrator_skill/SKILL.md`, `@SKILLS/projekt/profil.md` |
 | `.gitignore` | wpis `Docs/` |
-| Platforma | Claude Code z modelami `haiku`, `sonnet`, `opus`, z pluginem superpowers (katalog pluginów musi być dodany na komputerze) i z możliwością odpalania agentów przez agenta. Po zmianie nazw modeli poprawiasz tabele w `orchestrator_skill`, `planner_skill`, `tester_skill` i pole `model:` w agentach `wykonawca-kodu` i `wykonawca-testow`. Instrukcje są po polsku. |
+| Platforma | Claude Code z modelami `haiku`, `sonnet`, `opus`, z pluginem superpowers (katalog pluginów musi być dodany na komputerze) i z możliwością odpalania agentów przez agenta. Po zmianie nazw modeli poprawiasz tabele w `orchestrator_skill`, `planner_skill`, `tester_skill` i pola `model:` oraz `effort:` w agentach `planner`, `tester`, `wykonawca-kodu` i `wykonawca-testow`. Instrukcje są po polsku. |
 
 ## Commit
 

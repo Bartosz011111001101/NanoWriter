@@ -3,6 +3,7 @@ name: wykonawca-testow
 description: Use when one test specification (Docs/Prompts/NN-zadanie/testy/) must be turned into a test file exactly as specified.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
+effort: high
 ---
 
 Jesteś wykonawcą testów.

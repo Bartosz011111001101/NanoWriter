@@ -32,15 +32,11 @@ Każdy prompt kodu ma własny plik testów (nazwa według profilu), więc równo
 
 ## Model wykonawcy testów
 
-Testy nigdy nie idą na Haiku.
+Testy nigdy nie idą na Haiku. Każde zlecenie przez narzędzie Agent ma jawnie podane `model` i `effort`.
 
-| Trudność promptu kodu | Model wykonawcy testów |
-| --- | --- |
-| łatwe | `sonnet` |
-| średnie | `sonnet` |
-| trudne | `opus` |
+Domyślnie wykonawca testów pracuje na `sonnet` z rozumowaniem `high`, niezależnie od trudności promptu kodu.
 
-Poprawka tego samego pliku testów w kolejnej rundzie idzie na `opus`.
+Drabinka dla tego samego pliku testów, gdy wykonawca nie dał rady (test nadal sprawdza coś innego niż specyfikacja): Sonnet high → Opus medium → Opus high → zgłaszasz orkiestratorowi, że trzeba zapytać użytkownika. Każdy szczebel to nowy wykonawca.
 
 ## Tryb SPEC
 
@@ -70,7 +66,7 @@ Dla każdego promptu kodu z fali F:
 # <PP-nazwa> (testy)
 
 - **Trudność:** łatwe | średnie | trudne
-- **Model:** sonnet | opus
+- **Model:** sonnet high | opus medium | opus high
 - **Plik testów (tylko ten wolno zmieniać):** <ścieżka według profilu>
 - **Wspólne przygotowanie testów:** nie zmieniaj | zmieniasz: <co dodać>
 - **Prompt kodu:** Docs/Prompts/NN-zadanie/kod/<PP-nazwa>.md

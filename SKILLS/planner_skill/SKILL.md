@@ -1,6 +1,6 @@
 ---
 name: planner_skill
-description: Używaj, gdy zadanie trzeba rozpisać na fale i prompty kodu dla wykonawców (Haiku, Sonnet, Opus), ocenić trudność promptu, opisać wykonawcy stan obecny kodu albo napisać lub zmienić kontrakt modułu.
+description: Używaj, gdy zadanie trzeba rozpisać na fale i prompty kodu dla wykonawców (Haiku, Sonnet), ocenić trudność promptu, opisać wykonawcy stan obecny kodu albo napisać lub zmienić kontrakt modułu.
 ---
 
 # Planowanie
@@ -65,6 +65,7 @@ Promptów testów nie piszesz, robi to tester. W każdym prompcie kodu zostawias
   - „Stan obecny” piszesz z kodu, a gdy kodu jeszcze nie ma, ze szkieletu promptu, który go tworzy;
   - kontrakt modułu zmienia tylko jeden planner naraz. Pliki kontraktów, których zlecenie zabrania ruszać, czytasz, a potrzebną zmianę wpisujesz do „Otwartych pytań”;
   - w odpowiedzi dajesz jedną wspólną tabelę wszystkich promptów: prompt, trudność, pliki, zależy od, czeka na weryfikację.
+- **Inni plannerzy równolegle.** Inne zadania może w tym samym czasie planować inny planner. Zlecenie mówi, które kontrakty zmieniasz, a które tylko czytasz. Gdy Twój prompt potrzebuje kodu z zadania innego plannera, którego promptów jeszcze nie znasz, wpisz w „Zależy od” `NN-zadanie (moduł <nazwa>)`, a „Stan obecny” oprzyj na obecnym kontrakcie tego modułu i celu tamtego zadania. Orkiestrator zamieni ten wpis na konkretne prompty.
 - **Czeka na weryfikację.** Fala F+1 rusza zwykle, gdy kod fali F jest napisany, ale zanim przejdzie testy. Wpisz „tak” w kolumnie „Czeka na weryfikację”, gdy fala F+1 uruchamia na prawdziwo kod wcześniejszych fal (pobieranie danych, długi trening, test bramki na prawdziwych danych) albo opiera się na zachowaniu, którego szkielet i kontrakt nie ustalają. W innym przypadku wpisz „nie”. Fala 1 zadania ma „tak”, jeśli wymaga zweryfikowanego kodu poprzedniego zadania.
 
 ## Trudność
@@ -73,9 +74,11 @@ Trudność zależy od zakresu zmian i od tego, czy umiesz rozwiązanie rozpisać
 
 | Trudność | Model kodu | Warunek |
 | --- | --- | --- |
-| trudne | Opus | Nie umiesz rozpisać rozwiązania z góry, bo trzeba je zaprojektować albo zbadać, **albo** prompt zmienia więcej niż 5 plików. |
+| trudne | Sonnet | Nie umiesz rozpisać rozwiązania z góry, bo trzeba je zaprojektować albo zbadać, **albo** prompt zmienia więcej niż 5 plików. |
 | średnie | Sonnet | Prompt zmienia 3–5 plików **albo** przerabia istniejącą logikę, z której korzystają inne moduły, i zmiany muszą się zgadzać w kilku miejscach. |
 | łatwe | Haiku | Do 2 plików, struktura i sygnatury są ustalone, a każdy przypadek zachowania jest wypisany w „Krokach”. |
+
+Wszyscy wykonawcy pracują z rozumowaniem `high`. Opus wchodzi tylko na drabince eskalacji orkiestratora, więc prompt trudny musi być rozpisany tak, żeby zrobił go Sonnet: część do zaprojektowania opisz ograniczeniami i niezmiennikami, a nie samym celem.
 
 Testy nigdy nie idą na Haiku. Model wykonawcy testów dobiera tester (minimum Sonnet).
 

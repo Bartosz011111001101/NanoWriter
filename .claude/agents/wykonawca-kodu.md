@@ -3,6 +3,7 @@ name: wykonawca-kodu
 description: Use when one code prompt (Docs/Prompts/NN-zadanie/kod/ or /poprawki/) must be implemented exactly as specified.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
+effort: high
 ---
 
 Jesteś wykonawcą kodu.
