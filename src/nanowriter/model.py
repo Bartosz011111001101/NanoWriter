@@ -1,6 +1,10 @@
-"""Modele językowe NanoWriter. Etap 1: model bigramowy."""
+"""Modele językowe NanoWriter: bigram (etap 1) i transformer GPT (etap 4)."""
+
+import math
+from dataclasses import dataclass
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 
@@ -32,3 +36,183 @@ class BigramLanguageModel(nn.Module):
         Przykład: idx o kształcie [1, 1] -> logity o kształcie [1, 1, vocab_size]
         """
         return self.token_embedding(idx)
+
+
+@dataclass(frozen=True)
+class GPTConfig:
+    """Rozmiar transformera.
+
+    Przykład: GPTConfig() -> vocab_size=1024, block_size=256, n_layer=4, n_head=4, d_model=128
+    Przykład: GPTConfig(d_model=130, n_head=4) -> ValueError (130 nie dzieli się przez 4)
+    Przykład: GPTConfig(n_layer=0) -> ValueError
+    """
+
+    vocab_size: int = 1024
+    block_size: int = 256
+    n_layer: int = 4
+    n_head: int = 4
+    d_model: int = 128
+
+    def __post_init__(self) -> None:
+        """Sprawdza, że każde pole >= 1 i d_model dzieli się przez n_head.
+
+        Przykład: GPTConfig(vocab_size=1) -> poprawny
+        Przykład: GPTConfig(block_size=0) -> ValueError z "block_size" w komunikacie
+        """
+        for name in ("vocab_size", "block_size", "n_layer", "n_head", "d_model"):
+            value = getattr(self, name)
+            if value < 1:
+                raise ValueError(f"{name} musi być >= 1, otrzymano {value}")
+        if self.d_model % self.n_head != 0:
+            raise ValueError(
+                f"d_model ({self.d_model}) musi dzielić się przez n_head ({self.n_head})"
+            )
+
+
+class CausalSelfAttention(nn.Module):
+    """Wielogłowicowa uwaga z maską przyczynową: pozycja t widzi tylko pozycje 0..t.
+
+    Przykład: CausalSelfAttention(GPTConfig(d_model=32, n_head=2, block_size=16))(x[2, 5, 32])
+        -> tensor [2, 5, 32]
+    """
+
+    def __init__(self, config: GPTConfig) -> None:
+        """Tworzy qkv (d_model -> 3*d_model), proj (d_model -> d_model) i bufor maski.
+
+        Przykład: CausalSelfAttention(GPTConfig()).head_dim -> 32
+        """
+        super().__init__()
+        self.n_head: int = config.n_head
+        self.head_dim: int = config.d_model // config.n_head
+        self.qkv = nn.Linear(config.d_model, 3 * config.d_model, bias=True)
+        self.proj = nn.Linear(config.d_model, config.d_model, bias=True)
+        mask = torch.tril(torch.ones(config.block_size, config.block_size)).bool()
+        self.register_buffer("mask", mask, persistent=False)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Zwraca wynik uwagi dla x: FloatTensor[B, T, d_model] -> FloatTensor[B, T, d_model].
+
+        Przykład: x[1, 1, d_model] -> wynik [1, 1, d_model] (uwaga tylko na samą siebie)
+        """
+        b, t, c = x.shape
+        q, k, v = self.qkv(x).split(c, dim=-1)
+        q = q.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
+
+        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        att = att.masked_fill(~self.mask[:t, :t], float("-inf"))
+        att = F.softmax(att, dim=-1)
+
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(b, t, c)
+        return self.proj(y)
+
+
+class MLP(nn.Module):
+    """Sieć feed-forward: d_model -> 4*d_model -> GELU -> d_model.
+
+    Przykład: MLP(GPTConfig(d_model=32))(x[2, 5, 32]) -> tensor [2, 5, 32]
+    """
+
+    def __init__(self, config: GPTConfig) -> None:
+        """Tworzy fc, act (dokładny GELU) i proj.
+
+        Przykład: MLP(GPTConfig()).fc.out_features -> 512
+        """
+        super().__init__()
+        self.fc = nn.Linear(config.d_model, 4 * config.d_model, bias=True)
+        self.act = nn.GELU(approximate="none")
+        self.proj = nn.Linear(4 * config.d_model, config.d_model, bias=True)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Zwraca proj(act(fc(x))) o kształcie x.
+
+        Przykład: x[2, 5, 128] -> wynik [2, 5, 128]
+        """
+        return self.proj(self.act(self.fc(x)))
+
+
+class Block(nn.Module):
+    """Blok transformera w układzie pre-norm: x + attn(ln1(x)), potem x + mlp(ln2(x)).
+
+    Przykład: Block(GPTConfig(d_model=32, n_head=2, block_size=16))(x[2, 5, 32]) -> [2, 5, 32]
+    """
+
+    def __init__(self, config: GPTConfig) -> None:
+        """Tworzy ln1, attn, ln2, mlp.
+
+        Przykład: Block(GPTConfig()).ln1.normalized_shape -> (128,)
+        """
+        super().__init__()
+        self.ln1 = nn.LayerNorm(config.d_model)
+        self.attn = CausalSelfAttention(config)
+        self.ln2 = nn.LayerNorm(config.d_model)
+        self.mlp = MLP(config)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Zwraca wynik bloku o kształcie x.
+
+        Przykład: x[1, 3, 128] -> wynik [1, 3, 128]
+        """
+        x = x + self.attn(self.ln1(x))
+        x = x + self.mlp(self.ln2(x))
+        return x
+
+
+class GPT(nn.Module):
+    """Decoder-only transformer: embedding tokenów i pozycji, n_layer bloków, ln_f, lm_head.
+
+    Wagi lm_head są wspólne z tok_emb (weight tying).
+    Przykład: GPT(GPTConfig()) -> 957184 parametrów
+    Przykład: GPT(GPTConfig(vocab_size=64, block_size=16, n_layer=2, n_head=2, d_model=32))
+        -> 28032 parametrów
+    """
+
+    def __init__(self, config: GPTConfig) -> None:
+        """Buduje warstwy, wiąże lm_head.weight z tok_emb.weight i inicjalizuje wagi.
+
+        Przykład: m = GPT(GPTConfig()); m.lm_head.weight is m.tok_emb.weight -> True
+        """
+        super().__init__()
+        self.config = config
+        self.tok_emb = nn.Embedding(config.vocab_size, config.d_model)
+        self.pos_emb = nn.Embedding(config.block_size, config.d_model)
+        self.blocks = nn.ModuleList(Block(config) for _ in range(config.n_layer))
+        self.ln_f = nn.LayerNorm(config.d_model)
+        self.lm_head = nn.Linear(config.d_model, config.vocab_size, bias=False)
+        self.lm_head.weight = self.tok_emb.weight
+
+        for module in self.modules():
+            if isinstance(module, (nn.Linear, nn.Embedding)):
+                nn.init.normal_(module.weight, mean=0.0, std=0.02)
+            if isinstance(module, nn.Linear) and module.bias is not None:
+                nn.init.zeros_(module.bias)
+        resid_std = 0.02 / math.sqrt(2 * config.n_layer)
+        for block in self.blocks:
+            nn.init.normal_(block.attn.proj.weight, mean=0.0, std=resid_std)
+            nn.init.normal_(block.mlp.proj.weight, mean=0.0, std=resid_std)
+
+    def forward(self, idx: torch.Tensor) -> torch.Tensor:
+        """Zwraca logity następnego tokenu dla każdej pozycji.
+
+        idx: LongTensor[B, T], 1 <= T <= block_size, wartości 0 <= id < vocab_size.
+        Zwraca: FloatTensor[B, T, vocab_size] (float32).
+        Przykład: idx [2, 16] przy GPTConfig(vocab_size=64, block_size=16, ...)
+            -> logity [2, 16, 64]
+        Przykład: idx [1, 17] przy block_size=16 -> ValueError
+        Przykład: idx [1, 0] -> ValueError; idx [5] (1 wymiar) -> ValueError
+        """
+        if idx.dim() != 2:
+            raise ValueError(f"idx musi mieć 2 wymiary [B, T], otrzymano {idx.dim()}")
+        t = idx.shape[1]
+        if t == 0:
+            raise ValueError("T musi być >= 1, otrzymano 0")
+        if t > self.config.block_size:
+            raise ValueError(f"T ({t}) przekracza block_size ({self.config.block_size})")
+
+        pos = torch.arange(t, dtype=torch.long, device=idx.device)
+        x = self.tok_emb(idx) + self.pos_emb(pos)
+        for block in self.blocks:
+            x = block(x)
+        return self.lm_head(self.ln_f(x))
