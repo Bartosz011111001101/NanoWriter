@@ -69,6 +69,60 @@ class GPTConfig:
             )
 
 
+class KVCache:
+    """Pamięć kluczy i wartości uwagi dla kolejnych warstw (KV cache) jednego generowania.
+
+    Przykład: c = KVCache(); c.update(0, k[1, 2, 3, 4], v[1, 2, 3, 4]) -> (k, v); c.length -> 3
+    """
+
+    def __init__(self) -> None:
+        """Tworzy pustą pamięć.
+
+        Przykład: KVCache().length -> 0
+        """
+        self._keys: list[torch.Tensor] = []
+        self._values: list[torch.Tensor] = []
+
+    @property
+    def length(self) -> int:
+        """Zwraca liczbę zapamiętanych pozycji (warstwy 0); 0, gdy pusta.
+
+        Przykład: po update(0, k[1, 2, 3, 4], ...) i update(0, k[1, 2, 1, 4], ...) -> 4
+        """
+        if not self._keys:
+            return 0
+        return int(self._keys[0].shape[2])
+
+    def update(
+        self, layer: int, k: torch.Tensor, v: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Dopisuje k, v [B, n_head, T_new, head_dim] do warstwy layer; zwraca jej pełne k, v.
+
+        Przykład: pusta c, c.update(0, k[1, 2, 3, 4], v[1, 2, 3, 4])
+            -> k, v o kształcie [1, 2, 3, 4]
+        Przykład: potem c.update(0, k2[1, 2, 1, 4], v2[1, 2, 1, 4]) -> kształt [1, 2, 4, 4]
+        Przykład: pusta c, c.update(1, k, v) -> ValueError (brak warstwy 0)
+        """
+        stored = len(self._keys)
+        if layer < 0 or layer > stored:
+            raise ValueError(f"layer musi być w [0, {stored}], otrzymano {layer}")
+        if layer == stored:
+            self._keys.append(k)
+            self._values.append(v)
+        else:
+            self._keys[layer] = torch.cat([self._keys[layer], k], dim=2)
+            self._values[layer] = torch.cat([self._values[layer], v], dim=2)
+        return self._keys[layer], self._values[layer]
+
+    def reset(self) -> None:
+        """Czyści pamięć wszystkich warstw.
+
+        Przykład: c.reset(); c.length -> 0
+        """
+        self._keys = []
+        self._values = []
+
+
 class CausalSelfAttention(nn.Module):
     """Wielogłowicowa uwaga z maską przyczynową: pozycja t widzi tylko pozycje 0..t.
 
@@ -89,9 +143,13 @@ class CausalSelfAttention(nn.Module):
         mask = torch.tril(torch.ones(config.block_size, config.block_size)).bool()
         self.register_buffer("mask", mask, persistent=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, cache: KVCache | None = None, layer: int = 0
+    ) -> torch.Tensor:
         """Zwraca wynik uwagi dla x: FloatTensor[B, T, d_model] -> FloatTensor[B, T, d_model].
 
+        cache: k, v nowych pozycji dopisane do warstwy layer; nowa pozycja start + t widzi
+        klucze 0..start + t, gdzie start = liczba pozycji w cache tej warstwy przed dopisaniem.
         Przykład: x[1, 1, d_model] -> wynik [1, 1, d_model] (uwaga tylko na samą siebie)
         """
         b, t, c = x.shape
@@ -100,8 +158,13 @@ class CausalSelfAttention(nn.Module):
         k = k.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
 
+        if cache is not None:
+            k, v = cache.update(layer, k, v)
+        t_all = k.shape[2]
+        start = t_all - t
+
         att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        att = att.masked_fill(~self.mask[:t, :t], float("-inf"))
+        att = att.masked_fill(~self.mask[start : start + t, :t_all], float("-inf"))
         att = F.softmax(att, dim=-1)
 
         y = att @ v
@@ -150,12 +213,14 @@ class Block(nn.Module):
         self.ln2 = nn.LayerNorm(config.d_model)
         self.mlp = MLP(config)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Zwraca wynik bloku o kształcie x.
+    def forward(
+        self, x: torch.Tensor, cache: KVCache | None = None, layer: int = 0
+    ) -> torch.Tensor:
+        """Zwraca wynik bloku o kształcie x; cache i layer przekazane do attn.
 
         Przykład: x[1, 3, 128] -> wynik [1, 3, 128]
         """
-        x = x + self.attn(self.ln1(x))
+        x = x + self.attn(self.ln1(x), cache, layer)
         x = x + self.mlp(self.ln2(x))
         return x
 
@@ -193,14 +258,18 @@ class GPT(nn.Module):
             nn.init.normal_(block.attn.proj.weight, mean=0.0, std=resid_std)
             nn.init.normal_(block.mlp.proj.weight, mean=0.0, std=resid_std)
 
-    def forward(self, idx: torch.Tensor) -> torch.Tensor:
+    def forward(self, idx: torch.Tensor, cache: KVCache | None = None) -> torch.Tensor:
         """Zwraca logity następnego tokenu dla każdej pozycji.
 
-        idx: LongTensor[B, T], 1 <= T <= block_size, wartości 0 <= id < vocab_size.
+        idx: LongTensor[B, T], wartości 0 <= id < vocab_size; z cache tylko nowe tokeny,
+        na pozycjach cache.length .. cache.length + T - 1 (razem najwyżej block_size).
         Zwraca: FloatTensor[B, T, vocab_size] (float32).
         Przykład: idx [2, 16] przy GPTConfig(vocab_size=64, block_size=16, ...)
             -> logity [2, 16, 64]
+        Przykład: c = KVCache(); model(idx[:, :5], cache=c) i model(idx[:, 5:], cache=c)
+            -> sklejone logity == model(idx) (atol=1e-5), c.length == T
         Przykład: idx [1, 17] przy block_size=16 -> ValueError
+        Przykład: c.length == 16, model(idx[1, 1], cache=c) przy block_size=16 -> ValueError
         Przykład: idx [1, 0] -> ValueError; idx [5] (1 wymiar) -> ValueError
         """
         if idx.dim() != 2:
@@ -208,11 +277,15 @@ class GPT(nn.Module):
         t = idx.shape[1]
         if t == 0:
             raise ValueError("T musi być >= 1, otrzymano 0")
-        if t > self.config.block_size:
-            raise ValueError(f"T ({t}) przekracza block_size ({self.config.block_size})")
+        start = cache.length if cache is not None else 0
+        if start + t > self.config.block_size:
+            raise ValueError(
+                f"pozycje cache ({start}) + T ({t}) przekraczają block_size "
+                f"({self.config.block_size})"
+            )
 
-        pos = torch.arange(t, dtype=torch.long, device=idx.device)
+        pos = torch.arange(start, start + t, dtype=torch.long, device=idx.device)
         x = self.tok_emb(idx) + self.pos_emb(pos)
-        for block in self.blocks:
-            x = block(x)
+        for i, block in enumerate(self.blocks):
+            x = block(x, cache, i)
         return self.lm_head(self.ln_f(x))
