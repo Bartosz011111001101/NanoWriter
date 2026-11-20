@@ -308,3 +308,31 @@ def sample_lines(text: str, max_chars: int) -> str:
         return text
     step = math.ceil(len(text) / max_chars)
     return "\n".join(text.split("\n")[::step])
+
+
+def sample_file(path: Path, max_chars: int) -> str:
+    r"""Zwraca co k-tą linię pliku (k = ceil(liczba znaków / max_chars)), gdy plik jest za długi.
+
+    Plik jest czytany liniami w dwóch przebiegach, bez wczytywania całości do pamięci.
+    Wynik składa się z całych linii pliku razem z ich "\n".
+    Przykład: plik "a\nb\nc\nd\n", max_chars=4 -> "a\nc\n"
+    Przykład: plik "abc", max_chars=10 -> "abc"
+    Przykład: pusty plik, max_chars=5 -> ""
+    Przykład: plik "a\r\nb\r\n", max_chars=3 -> "a\n"
+    Przykład: max_chars=0 -> ValueError
+    """
+    if max_chars < 1:
+        raise ValueError(f"max_chars musi być co najmniej 1: {max_chars}")
+    total = 0
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            total += len(line)
+    if total <= max_chars:
+        return path.read_text(encoding="utf-8")
+    step = math.ceil(total / max_chars)
+    kept: list[str] = []
+    with path.open(encoding="utf-8") as handle:
+        for number, line in enumerate(handle):
+            if number % step == 0:
+                kept.append(line)
+    return "".join(kept)
