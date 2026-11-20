@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from nanowriter.dataset import get_batch
+from nanowriter.dataset import get_batch, get_masked_batch
 from nanowriter.model import GPT, GPTConfig
 
 
@@ -90,12 +90,17 @@ class TrainConfig:
             raise ValueError(f"checkpoint_every musi być >= 0, jest {self.checkpoint_every}")
 
 
-def compute_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-    """Zwraca średnią entropię krzyżową po wszystkich pozycjach batcha.
+def compute_loss(
+    logits: torch.Tensor, targets: torch.Tensor, mask: torch.Tensor | None = None
+) -> torch.Tensor:
+    """Zwraca średnią entropię krzyżową po pozycjach batcha, opcjonalnie tylko tam, gdzie mask = 1.
 
-    logits: FloatTensor[B, T, V], targets: LongTensor[B, T].
+    logits: FloatTensor[B, T, V], targets: LongTensor[B, T], mask: bool albo 0/1 [B, T] albo None.
     Zwraca: skalar (tensor o kształcie []) z gradientem względem logits.
     Przykład: compute_loss(torch.zeros(1, 2, 4), torch.tensor([[0, 3]])) -> tensor(1.3863) (ln 4)
+    Przykład: l = zeros[1, 2, 4] z l[0, 1, 3] = 10, t = [[0, 3]]:
+        mask [[1, 0]] -> 1.3863, [[0, 1]] -> 0.0001, [[1, 1]] -> 0.6932, [[0, 0]] -> 0.0
+    Przykład: mask o kształcie [1, 3] przy targets [1, 2] -> ValueError
     Przykład: logits [1, 2, 4] i targets [1, 3] -> ValueError
     Przykład: logits [2, 4] (2 wymiary) -> ValueError
     """
@@ -107,7 +112,16 @@ def compute_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
             "(oczekiwane [B, T])"
         )
     vocab = logits.shape[-1]
-    return F.cross_entropy(logits.reshape(-1, vocab), targets.reshape(-1))
+    if mask is None:
+        return F.cross_entropy(logits.reshape(-1, vocab), targets.reshape(-1))
+    if mask.shape != targets.shape:
+        raise ValueError(
+            f"mask {tuple(mask.shape)} nie pasuje do targets {tuple(targets.shape)} "
+            "(oczekiwane [B, T])"
+        )
+    per_position = F.cross_entropy(logits.reshape(-1, vocab), targets.reshape(-1), reduction="none")
+    weights = mask.reshape(-1).to(device=per_position.device, dtype=per_position.dtype)
+    return (per_position * weights).sum() / weights.sum().clamp(min=1.0)
 
 
 def lr_at(step: int, config: TrainConfig) -> float:
@@ -158,19 +172,21 @@ def train_step(
     *,
     grad_clip: float = 0.0,
     bf16: bool = False,
+    mask: torch.Tensor | None = None,
 ) -> float:
     """Wykonuje jeden krok uczenia na batchu (x, y) i zwraca stratę sprzed aktualizacji wag.
 
-    x, y: LongTensor[B, T] na urządzeniu modelu.
+    x, y: LongTensor[B, T] na urządzeniu modelu; mask [B, T] zawęża stratę do pozycji z maską 1.
     grad_clip > 0: norma gradientów przycięta do grad_clip przed krokiem optymalizatora.
     bf16: forward i strata w autocast bfloat16 na urządzeniu x.
     Przykład: model nn.Embedding(4, 4) z wagami zerowymi, x = [[0, 1]], y = [[1, 2]]
         -> 1.3862943... (ln 4), wagi po kroku inne niż zera
+    Przykład: mask None -> to samo co dotąd; mask bez jedynek -> zwraca 0.0, wagi bez zmian
     """
     optimizer.zero_grad()
     with torch.autocast(device_type=x.device.type, dtype=torch.bfloat16, enabled=bf16):
         logits = model(x)
-        loss = compute_loss(logits, y)
+        loss = compute_loss(logits, y, mask)
     loss.backward()
     if grad_clip > 0:
         torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
@@ -186,14 +202,21 @@ def estimate_loss(
     device: str | torch.device,
     *,
     max_batches: int | None = None,
+    mask: torch.Tensor | None = None,
 ) -> float:
     """Zwraca średnią stratę na oknach data bez nakładania (deterministycznie, bez gradientów).
 
     Okno i: x = data[i*block_size : (i+1)*block_size], y przesunięte o 1; okna po kolei
     w batchach po batch_size; max_batches -> tylko pierwsze batche. Tryb modelu przywrócony.
+    mask 1D (jak data) zawęża średnią do tokenów z maską 1: maska okna i to
+    mask[i*bs + 1 : i*bs + bs + 1] (maska celów y), wynik to średnia po wszystkich
+    pozycjach z maską 1 w użytych oknach.
     Przykład: model nn.Embedding(4, 4) z wagami zerowymi, data = torch.arange(9) % 4,
         batch_size=2, block_size=4 -> 1.3862943... (ln 4), 2 okna
     Przykład: data = torch.arange(4), block_size=4 -> ValueError (N <= block_size)
+    Przykład: ta sama sytuacja z mask = torch.ones(9) -> 1.3862943... (ln 4)
+    Przykład: ta sama sytuacja z mask = torch.zeros(9) -> ValueError (brak tokenów z maską 1)
+    Przykład: mask o innej długości niż data -> ValueError
     """
     if data.dim() != 1:
         raise ValueError(f"data musi mieć 1 wymiar, ma {data.dim()}")
@@ -206,11 +229,14 @@ def estimate_loss(
         raise ValueError(f"data ma {n_data} tokenów, potrzeba więcej niż block_size ({block_size})")
     if max_batches is not None and max_batches < 1:
         raise ValueError(f"max_batches musi być >= 1, jest {max_batches}")
+    if mask is not None and mask.shape != data.shape:
+        raise ValueError(f"mask {tuple(mask.shape)} nie pasuje do data {tuple(data.shape)}")
     n_windows = (n_data - 1) // block_size
     was_training = model.training
     model.eval()
     total = 0.0
     used = 0
+    mask_count = 0
     try:
         with torch.no_grad():
             for batch_index, first in enumerate(range(0, n_windows, batch_size)):
@@ -221,11 +247,25 @@ def estimate_loss(
                 y = torch.stack([data[i * block_size + 1 : (i + 1) * block_size + 1] for i in ids])
                 x = x.to(device=device, dtype=torch.int64)
                 y = y.to(device=device, dtype=torch.int64)
-                loss = compute_loss(model(x), y)
-                total += loss.item() * len(ids)
-                used += len(ids)
+                if mask is None:
+                    loss = compute_loss(model(x), y)
+                    total += loss.item() * len(ids)
+                    used += len(ids)
+                    continue
+                m = torch.stack([mask[i * block_size + 1 : (i + 1) * block_size + 1] for i in ids])
+                m = m.to(device=device).bool()
+                ones = int(m.sum().item())
+                if ones == 0:
+                    continue
+                loss = compute_loss(model(x), y, m)
+                total += loss.item() * ones
+                mask_count += ones
     finally:
         model.train(was_training)
+    if mask is not None:
+        if mask_count == 0:
+            raise ValueError("brak tokenów z maską 1 w użytych oknach")
+        return total / mask_count
     return total / used
 
 
@@ -320,6 +360,8 @@ def train(
     resume_from: Path | None = None,
     log_path: Path | None = None,
     until_step: int | None = None,
+    mask: torch.Tensor | None = None,
+    val_mask: torch.Tensor | None = None,
 ) -> list[float]:
     """Trenuje model krokami start..end-1 i zwraca stratę każdego wykonanego kroku.
 
@@ -330,14 +372,27 @@ def train(
     resume_from: start = krok z checkpointu, odtworzone model, optymalizator i generator.
     until_step: koniec = min(until_step, max_steps); None -> max_steps.
     checkpoint_path: zapis co checkpoint_every kroków i na końcu wywołania.
+    mask: maska 1D dla data, batche z get_masked_batch; val_mask: maska 1D dla val_data.
     Przykład: max_steps=5, log_every=2 -> lista 5 strat, on_log wołana dla kroków 0, 2, 4
     Przykład: max_steps=4, log_every=2 -> on_log wołana dla kroków 0, 2, 3
     Przykład: max_steps=0 -> [], on_log nie wołana
     Przykład: straty train(until_step=k, checkpoint_path=p) + train(resume_from=p)
         == straty train() bez przerwy (CPU, ten sam config)
+    Przykład: mask None, val_mask None -> dokładnie jak dotąd
+    Przykład: mask o innej długości niż data -> ValueError przed pierwszym krokiem
+    Przykład: val_mask podane bez val_data -> ValueError
     """
     if until_step is not None and until_step < 0:
         raise ValueError(f"until_step musi być >= 0, jest {until_step}")
+    if mask is not None and mask.shape != data.shape:
+        raise ValueError(f"mask {tuple(mask.shape)} nie pasuje do data {tuple(data.shape)}")
+    if val_mask is not None:
+        if val_data is None:
+            raise ValueError("val_mask wymaga val_data")
+        if val_mask.shape != val_data.shape:
+            raise ValueError(
+                f"val_mask {tuple(val_mask.shape)} nie pasuje do val_data {tuple(val_data.shape)}"
+            )
     model.train()
     optimizer = make_optimizer(model, config)
     generator = torch.Generator().manual_seed(config.seed)
@@ -360,8 +415,16 @@ def train(
         lr = lr_at(step, config)
         for group in optimizer.param_groups:
             group["lr"] = lr
-        x, y = get_batch(data, config.batch_size, config.block_size, generator, device)
-        loss = train_step(model, optimizer, x, y, grad_clip=config.grad_clip, bf16=use_bf16)
+        if mask is None:
+            x, y = get_batch(data, config.batch_size, config.block_size, generator, device)
+            loss = train_step(model, optimizer, x, y, grad_clip=config.grad_clip, bf16=use_bf16)
+        else:
+            x, y, m = get_masked_batch(
+                data, mask, config.batch_size, config.block_size, generator, device
+            )
+            loss = train_step(
+                model, optimizer, x, y, grad_clip=config.grad_clip, bf16=use_bf16, mask=m
+            )
         losses.append(loss)
         if step % config.log_every == 0 or step == last_step:
             if on_log is not None:
@@ -379,6 +442,7 @@ def train(
                 config.block_size,
                 device,
                 max_batches=config.eval_batches,
+                mask=val_mask,
             )
             if on_eval is not None:
                 on_eval(step, val)
