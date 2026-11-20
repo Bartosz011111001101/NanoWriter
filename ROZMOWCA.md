@@ -4,6 +4,8 @@ Drugi model NanoWritera (~10M parametrów), z którym da się porozmawiać po po
 
 Wszystkie komendy uruchamiasz z katalogu głównego repo w Git Bash. `PYTHONUTF8=1` jest potrzebne na Windowsie, bez niego polskie znaki w wyjściu się sypią.
 
+W PowerShell prefiks `PYTHONUTF8=1` nie działa. Najpierw ustaw zmienną raz na całą sesję terminala: `$env:PYTHONUTF8 = "1"`, a potem wpisuj komendy bez tego prefiksu, np. `uv run python scripts/chat.py ...`.
+
 ## Przegląd
 
 | Krok | Co powstaje | Czas (RTX 5060 Ti) |
