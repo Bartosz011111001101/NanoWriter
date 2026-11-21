@@ -1,0 +1,33 @@
+@page { size: A4; margin: 18mm 17mm 20mm 17mm; }
+:root { --tekst: #1d2330; --akcent: #2b6cdf; --tlo-ramki: #f3f6fc; --kod: #f6f7f9; --linia: #d5dbe5; }
+html { font-size: 10.5pt; }
+body { font-family: "Segoe UI", "Calibri", sans-serif; color: var(--tekst); background: #fff; line-height: 1.5; max-width: none; margin: 0; padding: 0; }
+header#title-block-header { margin: 40mm 0 18mm; text-align: left; border-left: 6px solid var(--akcent); padding-left: 14px; }
+h1.title { font-size: 26pt; margin: 0 0 6px; line-height: 1.15; }
+p.subtitle { font-size: 13pt; color: #556; margin: 0; }
+nav#TOC { page-break-after: always; }
+nav#TOC::before { content: "Spis treści"; display: block; font-size: 16pt; font-weight: 700; margin-bottom: 8px; }
+nav#TOC ul { list-style: none; padding-left: 14px; margin: 2px 0; }
+nav#TOC > ul { padding-left: 0; }
+nav#TOC a { color: var(--tekst); text-decoration: none; }
+nav#TOC > ul > li { margin-top: 6px; font-weight: 600; }
+nav#TOC > ul > li li { font-weight: 400; }
+nav#TOC ul ul ul { display: none; }
+h1 { font-size: 18pt; color: var(--akcent); border-bottom: 2px solid var(--akcent); padding-bottom: 3px; margin: 26px 0 10px; page-break-before: always; }
+h2 { font-size: 13.5pt; margin: 20px 0 6px; page-break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 14px 0 4px; page-break-after: avoid; }
+p { margin: 6px 0; }
+code { font-family: "Cascadia Mono", "Consolas", monospace; font-size: 0.9em; background: var(--kod); padding: 0 3px; border-radius: 3px; }
+pre { background: var(--kod); border: 1px solid var(--linia); border-radius: 5px; padding: 8px 10px; font-size: 8.8pt; line-height: 1.35; white-space: pre-wrap; page-break-inside: avoid; }
+pre code { background: none; padding: 0; }
+blockquote { margin: 10px 0; padding: 7px 12px; background: var(--tlo-ramki); border-left: 4px solid var(--akcent); border-radius: 0 5px 5px 0; page-break-inside: avoid; }
+blockquote p { margin: 3px 0; }
+table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9.3pt; }
+tr { page-break-inside: avoid; }
+th, td { border: 1px solid var(--linia); padding: 4px 6px; vertical-align: top; text-align: left; }
+th { background: #e9eef8; }
+figure { margin: 12px 0; text-align: center; page-break-inside: avoid; }
+figure img { max-width: 100%; max-height: 140mm; }
+figcaption { font-size: 8.8pt; color: #556; margin-top: 4px; text-align: left; }
+ul, ol { padding-left: 22px; margin: 6px 0; }
+li { margin: 2px 0; }
