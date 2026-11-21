@@ -17,6 +17,7 @@ wandb/
 *.ckpt
 *.safetensors
 *.bin
+przewodnik/wyniki/
 
 # Notebooki
 .ipynb_checkpoints/

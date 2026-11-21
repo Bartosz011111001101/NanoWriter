@@ -131,9 +131,10 @@ class CausalSelfAttention(nn.Module):
     """
 
     def __init__(self, config: GPTConfig) -> None:
-        """Tworzy qkv (d_model -> 3*d_model), proj (d_model -> d_model) i bufor maski.
+        """Tworzy qkv (d_model -> 3*d_model), proj (d_model -> d_model), bufor maski i trace=None.
 
         Przykład: CausalSelfAttention(GPTConfig()).head_dim -> 32
+        Przykład: CausalSelfAttention(GPTConfig()).trace -> None
         """
         super().__init__()
         self.n_head: int = config.n_head
@@ -142,6 +143,7 @@ class CausalSelfAttention(nn.Module):
         self.proj = nn.Linear(config.d_model, config.d_model, bias=True)
         mask = torch.tril(torch.ones(config.block_size, config.block_size)).bool()
         self.register_buffer("mask", mask, persistent=False)
+        self.trace: dict[str, torch.Tensor] | None = None
 
     def forward(
         self, x: torch.Tensor, cache: KVCache | None = None, layer: int = 0
@@ -150,7 +152,11 @@ class CausalSelfAttention(nn.Module):
 
         cache: k, v nowych pozycji dopisane do warstwy layer; nowa pozycja start + t widzi
         klucze 0..start + t, gdzie start = liczba pozycji w cache tej warstwy przed dopisaniem.
+        trace: gdy słownik, zapisuje w nim "scores", "masked", "weights" (każdy
+        FloatTensor[B, n_head, T, T_all], odłączony od grafu); gdy None, nic nie zapisuje.
         Przykład: x[1, 1, d_model] -> wynik [1, 1, d_model] (uwaga tylko na samą siebie)
+        Przykład: attn.trace = {}; attn(x[2, 5, 32]) -> trace["weights"].shape == [2, 2, 5, 5]
+            przy GPTConfig(d_model=32, n_head=2, block_size=16)
         """
         b, t, c = x.shape
         q, k, v = self.qkv(x).split(c, dim=-1)
@@ -163,11 +169,16 @@ class CausalSelfAttention(nn.Module):
         t_all = k.shape[2]
         start = t_all - t
 
-        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        att = att.masked_fill(~self.mask[start : start + t, :t_all], float("-inf"))
-        att = F.softmax(att, dim=-1)
+        scores = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        masked = scores.masked_fill(~self.mask[start : start + t, :t_all], float("-inf"))
+        weights = F.softmax(masked, dim=-1)
 
-        y = att @ v
+        if self.trace is not None:
+            self.trace["scores"] = scores.detach()
+            self.trace["masked"] = masked.detach()
+            self.trace["weights"] = weights.detach()
+
+        y = weights @ v
         y = y.transpose(1, 2).contiguous().view(b, t, c)
         return self.proj(y)
 
